@@ -36,7 +36,7 @@
 
 <!-- 5. CLAHE -->
 <rect x="190" y="370" width="300" height="44" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
-<text font-family="Arial, sans-serif" font-weight="500" font-size="14" x="340" y="397" text-anchor="middle" fill="#085041">5. Normalisation CLAHE</text>
+<text font-family="Arial, sans-serif" font-weight="500" font-size="14" x="340" y="397" text-anchor="middle" fill="#085041">5. Égalisation + CLAHE</text>
 <line x1="340" y1="414" x2="340" y2="434" stroke="#888780" stroke-width="1.5" marker-end="url(#arrow)"/>
 
 <!-- 6. Split -->
