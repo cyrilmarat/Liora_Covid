@@ -166,3 +166,4 @@ cython_debug/
 
 data/
 !data/processed/features_v2.csv
+.DS_Store
