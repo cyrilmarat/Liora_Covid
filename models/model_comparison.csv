@@ -1,0 +1,7 @@
+modele,class_weight,hyperparametres,accuracy,f1_macro,f1_covid,f1_normal,f1_lung_opacity,f1_viral_pneumonia
+"Regression logistique (sans ponderation, OneVsRest)",non,"max_iter=1000, solver=lbfgs (defaut)",0.5998,0.38,0.0,0.73,0.56,0.21
+"Regression logistique (balanced, OneVsRest)",balanced,"max_iter=1000, solver=lbfgs (defaut)",0.5192,0.44,0.17,0.63,0.55,0.38
+"Regression logistique (GridSearch best, OneVsRest)",balanced,"C=0.1, penalty=l2, solver=liblinear, max_iter=1000",0.5173,0.43,0.17,0.63,0.55,0.38
+KNN (baseline),non applicable (KNN),"n_neighbors=5, weights=uniform, metric=minkowski",0.55,0.44,0.23,0.68,0.5,0.33
+KNN (GridSearch best),non applicable (KNN),"n_neighbors=14, weights=uniform, metric=chebyshev",0.6,0.46,0.18,0.73,0.54,0.39
+SVM (GridSearch best),non,"C=1, gamma=0.5, kernel=rbf",0.6209,0.45,0.09,0.74,0.56,0.41
