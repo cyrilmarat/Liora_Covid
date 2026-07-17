@@ -10,6 +10,7 @@ from tensorflow.keras.layers import Flatten
 from tensorflow.keras.layers import Conv2D 
 from tensorflow.keras.layers import MaxPooling2D
 from tensorflow.keras.layers import Rescaling
+from tensorflow.keras.layers import BatchNormalization,GlobalAveragePooling2D
 from tensorflow.keras.preprocessing import image_dataset_from_directory
 from sklearn.metrics import f1_score, accuracy_score, classification_report
 
@@ -105,28 +106,83 @@ inputs = Input(shape=(299, 299, 1), name="Input")
 
 normalization_layer=Rescaling(1./255)
 
-first_layer = Conv2D(
-    filters=64,
-    kernel_size=(7, 7),
-    padding='valid',
+#layer 1 à 3
+layer1 = Conv2D(
+    filters=32,
+    kernel_size=(3, 3),
+    padding='same',
     activation='relu',
     name='conv_layer1',
 )
 
-second_layer = MaxPooling2D(
+layer2=BatchNormalization(name="BatchNormalization1")
+
+layer3 = MaxPooling2D(
     pool_size=(2, 2),
-    name='max_pooling_layer'
+    name='max_pooling_layer1'
+)
+#layer 4 à 6
+layer4 = Conv2D(
+    filters=64,
+    kernel_size=(3, 3),
+    padding='same',
+    activation='relu',
+    name='conv_layer2',
 )
 
-third_layer = Dropout(rate=0.2)
+layer5=BatchNormalization(name="BatchNormalization2")
 
-fourth_layer = Flatten()
+layer6 = MaxPooling2D(
+    pool_size=(2, 2),
+    name='max_pooling_layer2'
+)
 
-fifth_layer = Dense(
+#layer 7 à 9
+layer7 = Conv2D(
+    filters=128,
+    kernel_size=(3, 3),
+    padding='same',
+    activation='relu',
+    name='conv_layer3',
+)
+
+layer8=BatchNormalization(name="BatchNormalization3")
+
+layer9 = MaxPooling2D(
+    pool_size=(2, 2),
+    name='max_pooling_layer3'
+)
+
+#layer 10 à 12
+layer10 = Conv2D(
+    filters=256,
+    kernel_size=(3, 3),
+    padding='same',
+    activation='relu',
+    name='conv_layer4',
+)
+
+layer11=BatchNormalization(name="BatchNormalization4")
+
+layer12 = MaxPooling2D(
+    pool_size=(2, 2),
+    name='max_pooling_layer4'
+)
+
+
+#layer 14 à 18
+layer13 = GlobalAveragePooling2D()
+layer14 = Dropout(rate=0.3)
+
+layer15 = Flatten()
+
+layer16 = Dense(
     units=128,
     activation='relu',
     name='dense_hidden_layer'
 )
+
+layer17 = Dropout(rate=0.3)
 
 output_layer = Dense(
     units=4,
@@ -138,12 +194,23 @@ output_layer = Dense(
 # %%
 # Utilisation des couches
 x= normalization_layer(inputs)
-x = first_layer(x)
-x = second_layer(x)
-x = third_layer(x)
-x = fourth_layer(x)
-x = fifth_layer(x)
-
+x = layer1(x)
+x = layer2(x)
+x = layer3(x)
+x = layer4(x)
+x = layer5(x)
+x = layer6(x)
+x = layer7(x)
+x = layer8(x)
+x = layer9(x)
+x = layer10(x)
+x = layer11(x)
+x = layer12(x)
+x = layer13(x)
+x = layer14(x)
+x = layer15(x)
+x = layer16(x)
+x = layer17(x)
 
 
 # Création du modèle
@@ -165,7 +232,7 @@ model_history = model.fit(train_ds,
                                        time_callback],
                           shuffle=False) 
 
-model.save('cnn16072026_v1_cov2d_7-7.keras')
+model.save('cnn16072026_v3.keras')
 
 train_acc = model_history.history['accuracy']
 val_acc = model_history.history['val_accuracy']
