@@ -61,8 +61,7 @@ test_ds = image_dataset_from_directory(
 )
 
 # %%
-# VGG16 a son propre preprocessing (soustraction de la moyenne ImageNet par canal, ordre BGR),
-# on l'applique en pipeline plutôt qu'avec une couche Rescaling manuelle
+# VGG16 a son propre preprocessing 
 train_ds = train_ds.map(lambda x, y: (preprocess_input(x), y))
 val_ds = val_ds.map(lambda x, y: (preprocess_input(x), y))
 test_ds = test_ds.map(lambda x, y: (preprocess_input(x), y))
@@ -110,7 +109,7 @@ time_callback = TimingCallback()
 inputs = Input(shape=(224, 224, 3), name="Input")
 
 base_model = VGG16(
-    weights='imagenet',
+    #weights='imagenet',
     include_top=False,
     input_tensor=inputs
 )
