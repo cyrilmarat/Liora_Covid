@@ -82,7 +82,7 @@ test_ds = image_dataset_from_directory(
 )
 
 # à calculer sur les labels du train 
-y_train_not_augmented = np.concatenate([labels for images, labels in train_ds_not_augmented], axis=0)
+y_train = np.concatenate([labels for images, labels in train_ds_not_augmented], axis=0)
 class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
 class_weight_dict = dict(enumerate(class_weights))
 
