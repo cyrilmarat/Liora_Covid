@@ -14,6 +14,7 @@ from tensorflow.keras.layers import BatchNormalization,GlobalAveragePooling2D
 from tensorflow.keras.preprocessing import image_dataset_from_directory
 from tensorflow.keras.regularizers import l2
 from sklearn.metrics import f1_score, accuracy_score, classification_report
+from sklearn.utils.class_weight import compute_class_weight
 
 # Pour encoder les labels
 from tensorflow.keras.utils import to_categorical 
@@ -39,7 +40,7 @@ train_ds = image_dataset_from_directory(
     image_size=(299, 299),
     batch_size = 32,
     labels="inferred",
-    seed=42,
+    shuffle=False,
     color_mode='grayscale'
     
 )
@@ -50,7 +51,7 @@ train_ds_not_augmented = image_dataset_from_directory(
     image_size=(299, 299),
     batch_size = 32,
     labels="inferred",
-    seed=42,
+    shuffle=False,
     color_mode='grayscale'
     
 )
