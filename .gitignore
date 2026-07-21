@@ -167,3 +167,10 @@ cython_debug/
 data/
 !data/processed/features_v2.csv
 .DS_Store
+
+# Modèles entraînés
+*.keras
+*.h5
+
+# Dossiers de sorties des modèles
+**/outputs_resnet*/
