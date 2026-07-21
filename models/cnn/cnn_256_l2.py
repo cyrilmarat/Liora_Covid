@@ -101,7 +101,7 @@ class TimingCallback(Callback):
     def on_epoch_end(self, epoch, logs={}):
         self.logs.append(timer()-self.starttime)
 
-
+@keras.saving.register_keras_serializable()
 class SparseF1Score(tf.keras.metrics.F1Score):
     """F1Score de Keras adaptée aux labels sparses (entiers) plutôt que one-hot."""
     def __init__(self, num_classes, **kwargs):
