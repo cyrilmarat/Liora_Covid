@@ -59,7 +59,6 @@ train_ds_not_augmented = image_dataset_from_directory(
 )
 
 
-
 # %%
 val_ds = image_dataset_from_directory(
     directory="../../../COVID-19_Radiography_Dataset_split/validation/",                                 

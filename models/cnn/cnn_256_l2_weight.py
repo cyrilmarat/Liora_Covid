@@ -55,7 +55,6 @@ train_ds_not_augmented = image_dataset_from_directory(
     shuffle=True,
     seed = 42,
     color_mode='grayscale'
-    
 )
 
 
