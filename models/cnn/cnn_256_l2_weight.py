@@ -82,7 +82,7 @@ test_ds = image_dataset_from_directory(
 )
 
 # à calculer sur les labels du train 
-y_train = np.concatenate([labels for images, labels in train_ds_not_augmented], axis=0)
+y_train_not_augmented = np.concatenate([labels for images, labels in train_ds_not_augmented], axis=0)
 class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
 class_weight_dict = dict(enumerate(class_weights))
 
@@ -98,6 +98,16 @@ class TimingCallback(Callback):
         self.starttime = timer()
     def on_epoch_end(self, epoch, logs={}):
         self.logs.append(timer()-self.starttime)
+
+class SparseF1Score(tf.keras.metrics.F1Score):
+    """F1Score de Keras adaptée aux labels sparses (entiers) plutôt que one-hot."""
+    def __init__(self, num_classes, **kwargs):
+        super().__init__(**kwargs)
+        self.num_classes_ = num_classes
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        y_true = tf.one_hot(tf.cast(tf.reshape(y_true, [-1]), tf.int32), depth=self.num_classes_)
+        return super().update_state(y_true, y_pred, sample_weight)
 
 # %%
 from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping
@@ -247,7 +257,7 @@ model = Model(inputs=inputs, outputs=outputs)
 
 model.compile(loss='sparse_categorical_crossentropy', # fonction de perte
               optimizer='adam',                # algorithme d'optimisation
-              metrics=['f1_score'])            # métrique d'évaluation
+              metrics=[SparseF1Score(num_classes=4, average='macro', name='f1_score')])            # métrique d'évaluation
 
 model_history = model.fit(train_ds,
                           validation_data=val_ds,
@@ -261,8 +271,7 @@ model_history = model.fit(train_ds,
 model.save('cnn_256_l2_weight.keras')
 
 
-# %%
-model_history.history['accuracy'].__sizeof__()
+
 
 # %%
 # Labels des axes
@@ -279,7 +288,7 @@ plt.plot(
 plt.plot(
          model_history.history['val_f1_score'], 
          label='Validation f1_score',
-         color='red')np.save('my_history.npy',history.history)
+         color='red')
 
 # Affichage de la légende
 plt.legend()
@@ -288,5 +297,5 @@ plt.legend()
 plt.show()
 
 plt.savefig('cnn_256_l2_weight.png',facecolor='white')
-np.save('cnn_256_l2_weight.npy',history.history)
+np.save('cnn_256_l2_weight.npy',model_history.history)
 

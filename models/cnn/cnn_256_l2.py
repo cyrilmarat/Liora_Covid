@@ -99,6 +99,18 @@ class TimingCallback(Callback):
     def on_epoch_end(self, epoch, logs={}):
         self.logs.append(timer()-self.starttime)
 
+
+class SparseF1Score(tf.keras.metrics.F1Score):
+    """F1Score de Keras adaptée aux labels sparses (entiers) plutôt que one-hot."""
+    def __init__(self, num_classes, **kwargs):
+        super().__init__(**kwargs)
+        self.num_classes_ = num_classes
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        y_true = tf.one_hot(tf.cast(tf.reshape(y_true, [-1]), tf.int32), depth=self.num_classes_)
+        return super().update_state(y_true, y_pred, sample_weight)
+    
+
 # %%
 from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping
 
@@ -247,7 +259,7 @@ model = Model(inputs=inputs, outputs=outputs)
 
 model.compile(loss='sparse_categorical_crossentropy', # fonction de perte
               optimizer='adam',                # algorithme d'optimisation
-              metrics=['f1_score'])            # métrique d'évaluation
+              metrics=[SparseF1Score(num_classes=4, average='macro', name='f1_score')])            # métrique d'évaluation
 
 model_history = model.fit(train_ds,
                           validation_data=val_ds,
@@ -288,4 +300,4 @@ plt.show()
 
 # Sauvegarde
 plt.savefig('cnn_256_l2.png',facecolor='white')
-np.save('cnn_256_l2.npy',history.history)
+np.save('cnn_256_l2.npy',model_history.history)
