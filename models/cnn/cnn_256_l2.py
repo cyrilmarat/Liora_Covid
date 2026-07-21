@@ -40,7 +40,8 @@ train_ds = image_dataset_from_directory(
     image_size=(299, 299),
     batch_size = 32,
     labels="inferred",
-    shuffle=False,
+    shuffle=True,
+    seed=42,
     color_mode='grayscale'
     
 )
@@ -64,7 +65,8 @@ val_ds = image_dataset_from_directory(
     image_size=(299, 299),
     batch_size = 32,
     labels="inferred",
-    shuffle=False,
+    seed = 42,
+    shuffle=True,
     color_mode='grayscale'
 )
 
@@ -77,7 +79,7 @@ test_ds = image_dataset_from_directory(
     batch_size = 32,
     labels="inferred",
     seed = 42,
-    shuffle=False,
+    shuffle=True,
     color_mode='grayscale'
 )
 
@@ -263,7 +265,7 @@ model.compile(loss='sparse_categorical_crossentropy', # fonction de perte
 
 model_history = model.fit(train_ds,
                           validation_data=val_ds,
-                          epochs=50,
+                          epochs=1,
                           callbacks = [reduce_learning_rate,
                                        early_stopping,
                                        time_callback],
@@ -295,9 +297,11 @@ plt.plot(
 # Affichage de la légende
 plt.legend()
 
-# Affichage de la figure
-plt.show()
+
 
 # Sauvegarde
-plt.savefig('cnn_256_l2.png',facecolor='white')
+plt.savefig('cnn_256_l2.png')
 np.save('cnn_256_l2.npy',model_history.history)
+
+# Affichage de la figure
+plt.show()
