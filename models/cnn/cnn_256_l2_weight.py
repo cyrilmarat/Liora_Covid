@@ -52,7 +52,8 @@ train_ds_not_augmented = image_dataset_from_directory(
     image_size=(299, 299),
     batch_size = 32,
     labels="inferred",
-    shuffle=False,
+    shuffle=True,
+    seed = 42,
     color_mode='grayscale'
     
 )
