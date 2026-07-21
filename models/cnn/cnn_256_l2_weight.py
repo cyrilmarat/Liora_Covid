@@ -263,7 +263,7 @@ model.compile(loss='sparse_categorical_crossentropy', # fonction de perte
 
 model_history = model.fit(train_ds,
                           validation_data=val_ds,
-                          epochs=1,
+                          epochs=50,
                           callbacks = [reduce_learning_rate,
                                        early_stopping,
                                        time_callback],
