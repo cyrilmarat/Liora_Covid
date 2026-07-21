@@ -113,19 +113,19 @@ class SparseF1Score(tf.keras.metrics.F1Score):
 from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping
 
 early_stopping = EarlyStopping(
-                                patience=5, # Attendre 5 epochs avant application
-                                min_delta=0.01, # si au bout de 5 epochs la fonction de perte ne varie pas de 1%, 
-    # que ce soit à la hausse ou à la baisse, on arrête
-                                verbose=1, # Afficher à quel epoch on s'arrête
-                                mode='min',
-                                monitor='val_loss')
+    patience=5,
+    min_delta=0.01,
+    verbose=1,
+    mode='max',
+    monitor='val_f1_score')
 
 reduce_learning_rate = ReduceLROnPlateau(
-                                    monitor="val_loss",
-                                    patience=3, # si val_loss stagne sur 3 epochs consécutives selon la valeur min_delta
+                                    monitor="val_f1_score",
+                                    patience=3, # si val_f1_score stagne sur 3 epochs consécutives selon la valeur min_delta
                                     min_delta=0.01,
                                     factor=0.1,  # On réduit le learning rate d'un facteur 0.1
                                     cooldown=4,  # On attend 4 epochs avant de réitérer 
+                                    mode='max',
                                     verbose=1)
 
 time_callback = TimingCallback()
