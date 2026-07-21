@@ -82,8 +82,8 @@ test_ds = image_dataset_from_directory(
 )
 
 # à calculer sur les labels du train 
-y_train = np.concatenate([labels for images, labels in train_ds_not_augmented], axis=0)
-class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
+y_train_not_augmented = np.concatenate([labels for images, labels in train_ds_not_augmented], axis=0)
+class_weights = compute_class_weight('balanced', classes=np.unique(y_train_not_augmented), y=y_train_not_augmented)
 class_weight_dict = dict(enumerate(class_weights))
 
 
@@ -267,7 +267,7 @@ model_history = model.fit(train_ds,
                           callbacks = [reduce_learning_rate,
                                        early_stopping,
                                        time_callback],
-                          class_weight=class_weight_dict,  # <-- ajouté             
+#                          class_weight=class_weight_dict,  # <-- ajouté             
                           shuffle=False) 
 
 model.save('cnn_256_l2.keras')
