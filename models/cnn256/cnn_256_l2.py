@@ -26,7 +26,7 @@ from sklearn import metrics
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import seaborn as sns
-
+import keras
 
 
 
@@ -258,7 +258,7 @@ model = Model(inputs=inputs, outputs=outputs)
 
 # %%
 
-
+import keras
 model.compile(loss='sparse_categorical_crossentropy', # fonction de perte
               optimizer='adam',                # algorithme d'optimisation
               metrics=[SparseF1Score(num_classes=4, average='macro', name='f1_score')])            # métrique d'évaluation
