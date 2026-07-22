@@ -175,7 +175,7 @@ model_history = model.fit(train_ds,
                           class_weight=class_weight_dict,  # <-- ajouté             
                           shuffle=False) 
 
-model.save('inceptionv3.keras')
+model.save('inceptionv3_head.keras')
 
 # %%
 # Phase 2 (optionnelle) : fine-tuning — on dégèle les dernières couches du base_model
@@ -190,7 +190,7 @@ for layer in base_model.layers[:fine_tune_at]:
 
 model.compile(loss='sparse_categorical_crossentropy',
               optimizer=tf.keras.optimizers.Adam(learning_rate=1e-5),  # LR réduit pour le fine-tuning
-              metrics=['accuracy'])
+               metrics=[SparseF1Score(num_classes=4, average='macro', name='f1_score')])            # métrique d'évaluation
 
 fine_tune_history = model.fit(train_ds,
                               validation_data=val_ds,
@@ -201,27 +201,25 @@ fine_tune_history = model.fit(train_ds,
                               class_weight=class_weight_dict,  # <-- ajouté
                               shuffle=False)
 
-model.save('inceptionv3_finetuned_16072026_v3.keras')
+model.save('inceptionv3_finetuned.keras')
 
-# %%
-train_acc = fine_tune_history.history['accuracy']
-val_acc = fine_tune_history.history['val_accuracy']
+
 
 # %%
 # Labels des axes
 plt.xlabel('Epochs')
-plt.ylabel('Accuracy')
+plt.ylabel('f1_score')
 
 # Courbe de la précision sur l'échantillon d'entrainement (phase de fine-tuning)
 plt.plot(
-         fine_tune_history.history['accuracy'],
-         label='Training Accuracy',
+         fine_tune_history.history['f1_score'],
+         label='Training f1_score',
          color='blue')
 
 # Courbe de la précision sur l'échantillon de validation (phase de fine-tuning)
 plt.plot(
-         fine_tune_history.history['val_accuracy'],
-         label='Validation Accuracy',
+         fine_tune_history.history['val_f1_score'],
+         label='Validation f1_score',
          color='red')
 
 # Affichage de la légende
