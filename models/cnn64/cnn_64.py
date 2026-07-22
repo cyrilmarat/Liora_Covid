@@ -10,8 +10,11 @@ from tensorflow.keras.layers import Flatten
 from tensorflow.keras.layers import Conv2D 
 from tensorflow.keras.layers import MaxPooling2D
 from tensorflow.keras.layers import Rescaling
+from tensorflow.keras.layers import BatchNormalization,GlobalAveragePooling2D
 from tensorflow.keras.preprocessing import image_dataset_from_directory
+from tensorflow.keras.regularizers import l2
 from sklearn.metrics import f1_score, accuracy_score, classification_report
+from sklearn.utils.class_weight import compute_class_weight
 
 # Pour encoder les labels
 from tensorflow.keras.utils import to_categorical 
@@ -23,7 +26,7 @@ from sklearn import metrics
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import seaborn as sns
-
+import keras
 
 
 
@@ -33,23 +36,37 @@ tf.config.list_physical_devices('GPU')
 
 # %%
 train_ds = image_dataset_from_directory(
-    directory="../../COVID-19_Radiography_Dataset_split/train_augmented/",                                 
+    directory="../../../COVID-19_Radiography_Dataset_split/train_augmented/",                                 
     image_size=(299, 299),
     batch_size = 32,
     labels="inferred",
+    shuffle=True,
     seed=42,
     color_mode='grayscale'
     
 )
 
-
 # %%
-val_ds = image_dataset_from_directory(
-    directory="../../COVID-19_Radiography_Dataset_split/validation/",                                 
+train_ds_not_augmented = image_dataset_from_directory(
+    directory="../../../COVID-19_Radiography_Dataset_split/train/",                                 
     image_size=(299, 299),
     batch_size = 32,
     labels="inferred",
-    shuffle=False,
+    shuffle=True,
+    seed = 42,
+    color_mode='grayscale'
+)
+
+
+
+# %%
+val_ds = image_dataset_from_directory(
+    directory="../../../COVID-19_Radiography_Dataset_split/validation/",                                 
+    image_size=(299, 299),
+    batch_size = 32,
+    labels="inferred",
+    seed = 42,
+    shuffle=True,
     color_mode='grayscale'
 )
 
@@ -57,14 +74,20 @@ val_ds = image_dataset_from_directory(
 
 # %%
 test_ds = image_dataset_from_directory(
-    directory="../../COVID-19_Radiography_Dataset_split/test/",                                 
+    directory="../../../COVID-19_Radiography_Dataset_split/test/",                                 
     image_size=(299, 299),
     batch_size = 32,
     labels="inferred",
     seed = 42,
-    shuffle=False,
+    shuffle=True,
     color_mode='grayscale'
 )
+
+# à calculer sur les labels du train 
+y_train_not_augmented = np.concatenate([labels for images, labels in train_ds_not_augmented], axis=0)
+class_weights = compute_class_weight('balanced', classes=np.unique(y_train_not_augmented), y=y_train_not_augmented)
+class_weight_dict = dict(enumerate(class_weights))
+
 
 # %%
 from tensorflow.keras.callbacks import Callback
@@ -78,23 +101,34 @@ class TimingCallback(Callback):
     def on_epoch_end(self, epoch, logs={}):
         self.logs.append(timer()-self.starttime)
 
+@keras.saving.register_keras_serializable()
+class SparseF1Score(tf.keras.metrics.F1Score):
+    """F1Score de Keras adaptée aux labels sparses (entiers) plutôt que one-hot."""
+    def __init__(self, num_classes, **kwargs):
+        super().__init__(**kwargs)
+        self.num_classes_ = num_classes
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        y_true = tf.one_hot(tf.cast(tf.reshape(y_true, [-1]), tf.int32), depth=self.num_classes_)
+        return super().update_state(y_true, y_pred, sample_weight)
+
 # %%
 from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping
 
 early_stopping = EarlyStopping(
-                                patience=5, # Attendre 5 epochs avant application
-                                min_delta=0.01, # si au bout de 5 epochs la fonction de perte ne varie pas de 1%, 
-    # que ce soit à la hausse ou à la baisse, on arrête
-                                verbose=1, # Afficher à quel epoch on s'arrête
-                                mode='min',
-                                monitor='val_loss')
+    patience=5,
+    min_delta=0.01,
+    verbose=1,
+    mode='max',
+    monitor='val_f1_score')
 
 reduce_learning_rate = ReduceLROnPlateau(
-                                    monitor="val_loss",
-                                    patience=3, # si val_loss stagne sur 3 epochs consécutives selon la valeur min_delta
+                                    monitor="val_f1_score",
+                                    patience=3, # si val_f1_score stagne sur 3 epochs consécutives selon la valeur min_delta
                                     min_delta=0.01,
                                     factor=0.1,  # On réduit le learning rate d'un facteur 0.1
                                     cooldown=4,  # On attend 4 epochs avant de réitérer 
+                                    mode='max',
                                     verbose=1)
 
 time_callback = TimingCallback()
@@ -105,28 +139,51 @@ inputs = Input(shape=(299, 299, 1), name="Input")
 
 normalization_layer=Rescaling(1./255)
 
-first_layer = Conv2D(
-    filters=64,
-    kernel_size=(7, 7),
-    padding='valid',
+#layer 1 à 3
+layer1 = Conv2D(
+    filters=32,
+    kernel_size=(3, 3),
+    padding='same',
     activation='relu',
     name='conv_layer1',
+    #kernel_regularizer=l2(1e-4)
 )
 
-second_layer = MaxPooling2D(
+layer2=BatchNormalization(name="BatchNormalization1")
+
+layer3 = MaxPooling2D(
     pool_size=(2, 2),
-    name='max_pooling_layer'
+    name='max_pooling_layer1'
+)
+#layer 4 à 6
+layer4 = Conv2D(
+    filters=64,
+    kernel_size=(3, 3),
+    padding='same',
+    activation='relu',
+    name='conv_layer2',
+    #kernel_regularizer=l2(1e-4)
 )
 
-third_layer = Dropout(rate=0.2)
+layer5=BatchNormalization(name="BatchNormalization2")
 
-fourth_layer = Flatten()
+layer6 = MaxPooling2D(
+    pool_size=(2, 2),
+    name='max_pooling_layer2'
+)
 
-fifth_layer = Dense(
+#layer 7 à 10
+
+layer7 = GlobalAveragePooling2D()
+layer8 = Dropout(rate=0.3)
+
+layer9 = Dense(
     units=128,
     activation='relu',
     name='dense_hidden_layer'
 )
+
+layer10 = Dropout(rate=0.3)
 
 output_layer = Dense(
     units=4,
@@ -138,11 +195,16 @@ output_layer = Dense(
 # %%
 # Utilisation des couches
 x= normalization_layer(inputs)
-x = first_layer(x)
-x = second_layer(x)
-x = third_layer(x)
-x = fourth_layer(x)
-x = fifth_layer(x)
+x = layer1(x)
+x = layer2(x)
+x = layer3(x)
+x = layer4(x)
+x = layer5(x)
+x = layer6(x)
+x = layer7(x)
+x = layer8(x)
+x = layer9(x)
+x = layer10(x)
 
 
 
@@ -155,7 +217,7 @@ model = Model(inputs=inputs, outputs=outputs)
 
 model.compile(loss='sparse_categorical_crossentropy', # fonction de perte
               optimizer='adam',                # algorithme d'optimisation
-              metrics=['accuracy'])            # métrique d'évaluation
+              metrics=[SparseF1Score(num_classes=4, average='macro', name='f1_score')])            # métrique d'évaluation
 
 model_history = model.fit(train_ds,
                           validation_data=val_ds,
@@ -163,35 +225,38 @@ model_history = model.fit(train_ds,
                           callbacks = [reduce_learning_rate,
                                        early_stopping,
                                        time_callback],
+                          #class_weight=class_weight_dict,  # <-- ajouté             
                           shuffle=False) 
 
-model.save('cnn16072026_v1_cov2d_7-7.keras')
+model.save('cnn_64.keras')
 
-train_acc = model_history.history['accuracy']
-val_acc = model_history.history['val_accuracy']
 
-# %%
-model_history.history['accuracy'].__sizeof__()
+
 
 # %%
 # Labels des axes
 plt.xlabel('Epochs')
-plt.ylabel('Accuracy')
+plt.ylabel('F1_Score')
 
 # Courbe de la précision sur l'échantillon d'entrainement
 plt.plot(
-         model_history.history['accuracy'],
-         label='Training Accuracy',
+         model_history.history['f1_score'],
+         label='Training f1_score',
          color='blue')
 
 # Courbe de la précision sur l'échantillon de test
 plt.plot(
-         model_history.history['val_accuracy'], 
-         label='Validation Accuracy',
+         model_history.history['val_f1_score'], 
+         label='Validation f1_score',
          color='red')
 
 # Affichage de la légende
 plt.legend()
+
+
+
+plt.savefig('cnn_64.png')
+np.save('cnn_64.npy',model_history.history)
 
 # Affichage de la figure
 plt.show()
