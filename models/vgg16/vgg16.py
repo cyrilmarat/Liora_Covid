@@ -20,7 +20,7 @@ from sklearn import metrics
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import seaborn as sns
-
+import keras
 
 # %%
 import tensorflow as tf
@@ -31,44 +31,60 @@ tf.config.list_physical_devices('GPU')
 # et attend des images RGB (3 canaux) -> color_mode='rgb'
 
 train_ds = image_dataset_from_directory(
-    directory="../../COVID-19_Radiography_Dataset_split/train_augmented/",
+    directory="../../../COVID-19_Radiography_Dataset_split/train_augmented/",
     image_size=(224, 224),
     batch_size=32,
     labels="inferred",
     seed=42,
+    shuffle=True,
     color_mode='rgb'
 )
 
+train_ds_not_augmented = image_dataset_from_directory(
+    directory="../../../COVID-19_Radiography_Dataset_split/train/",                                 
+    image_size=(224, 224),
+    batch_size = 32,
+    labels="inferred",
+    shuffle=True,
+    seed = 42,
+    color_mode='rgb'
+)
+
+
 # %%
 val_ds = image_dataset_from_directory(
-    directory="../../COVID-19_Radiography_Dataset_split/validation/",
+    directory="../../../COVID-19_Radiography_Dataset_split/validation/",
     image_size=(224, 224),
     batch_size=32,
     labels="inferred",
-    shuffle=False,
+    shuffle=True,
     color_mode='rgb'
 )
 
 # %%
 test_ds = image_dataset_from_directory(
-    directory="../../COVID-19_Radiography_Dataset_split/test/",
+    directory="../../../COVID-19_Radiography_Dataset_split/test/",
     image_size=(224, 224),
     batch_size=32,
     labels="inferred",
     seed=42,
-    shuffle=False,
+    shuffle=True,
     color_mode='rgb'
 )
 
+
+    
+
 # %%
-# VGG16 a son propre preprocessing 
+# InceptionV3 a son propre preprocessing (normalisation entre -1 et 1),
+# on l'applique en pipeline plutôt qu'avec une couche Rescaling manuelle
 train_ds = train_ds.map(lambda x, y: (preprocess_input(x), y))
 val_ds = val_ds.map(lambda x, y: (preprocess_input(x), y))
 test_ds = test_ds.map(lambda x, y: (preprocess_input(x), y))
 
-# à calculer sur les labels du train ( les proportions sont les memes malgré l'augmentation )
-y_train = np.concatenate([labels for images, labels in train_ds], axis=0)
-class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
+# à calculer sur les labels du train non augmenté
+y_train_not_augmented = np.concatenate([labels for images, labels in train_ds_not_augmented], axis=0)
+class_weights = compute_class_weight('balanced', classes=np.unique(y_train_not_augmented), y=y_train_not_augmented)
 class_weight_dict = dict(enumerate(class_weights))
 
 # %%
@@ -84,22 +100,49 @@ class TimingCallback(Callback):
         self.logs.append(timer() - self.starttime)
 
 # %%
+from tensorflow.keras.callbacks import Callback
+from timeit import default_timer as timer
+
+class TimingCallback(Callback):
+    def __init__(self, logs={}):
+        self.logs=[]
+    def on_epoch_begin(self, epoch, logs={}):
+        self.starttime = timer()
+    def on_epoch_end(self, epoch, logs={}):
+        self.logs.append(timer()-self.starttime)
+
+@keras.saving.register_keras_serializable()
+class SparseF1Score(tf.keras.metrics.F1Score):
+    """F1Score de Keras adaptée aux labels sparses (entiers) plutôt que one-hot."""
+    def __init__(self, num_classes, **kwargs):
+        super().__init__(**kwargs)
+        self.num_classes_ = num_classes
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        y_true = tf.one_hot(tf.cast(tf.reshape(y_true, [-1]), tf.int32), depth=self.num_classes_)
+        return super().update_state(y_true, y_pred, sample_weight)
+
+
+# %%
 from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping
 
 early_stopping = EarlyStopping(
-                                patience=5,
-                                min_delta=0.01,
-                                verbose=1,
-                                mode='min',
-                                monitor='val_loss')
+    patience=5,
+    min_delta=0.01,
+    verbose=1,
+    mode='max',
+    monitor='val_f1_score')
 
 reduce_learning_rate = ReduceLROnPlateau(
-                                    monitor="val_loss",
-                                    patience=3,
+                                    monitor="val_f1_score",
+                                    patience=3, # si val_f1_score stagne sur 3 epochs consécutives selon la valeur min_delta
                                     min_delta=0.01,
-                                    factor=0.1,
-                                    cooldown=4,
+                                    factor=0.1,  # On réduit le learning rate d'un facteur 0.1
+                                    cooldown=4,  # On attend 4 epochs avant de réitérer 
+                                    mode='max',
                                     verbose=1)
+
+
 
 time_callback = TimingCallback()
 
@@ -109,7 +152,7 @@ time_callback = TimingCallback()
 inputs = Input(shape=(224, 224, 3), name="Input")
 
 base_model = VGG16(
-    #weights='imagenet',
+    weights='imagenet',
     include_top=False,
     input_tensor=inputs
 )
@@ -131,9 +174,10 @@ model = Model(inputs=inputs, outputs=output_layer)
 
 # %%
 # Phase 1 : entraînement du head uniquement, base_model gelé
-model.compile(loss='sparse_categorical_crossentropy',
-              optimizer='adam',
-              metrics=['accuracy'])
+
+model.compile(loss='sparse_categorical_crossentropy', # fonction de perte
+              optimizer='adam',                # algorithme d'optimisation
+              metrics=[SparseF1Score(num_classes=4, average='macro', name='f1_score')])            # métrique d'évaluation
 
 model_history = model.fit(train_ds,
                           validation_data=val_ds,
