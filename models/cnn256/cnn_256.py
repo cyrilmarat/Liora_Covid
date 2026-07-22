@@ -212,16 +212,16 @@ layer12 = MaxPooling2D(
 layer13 = GlobalAveragePooling2D()
 layer14 = Dropout(rate=0.3)
 
-layer15 = Flatten()
+#layer15 = Flatten()
 
-layer16 = Dense(
+layer15 = Dense(
     units=128,
     activation='relu',
     name='dense_hidden_layer'
     
 )
 
-layer17 = Dropout(rate=0.3)
+layer16 = Dropout(rate=0.3)
 
 output_layer = Dense(
     units=4,
@@ -249,7 +249,7 @@ x = layer13(x)
 x = layer14(x)
 x = layer15(x)
 x = layer16(x)
-x = layer17(x)
+
 
 
 # Création du modèle
