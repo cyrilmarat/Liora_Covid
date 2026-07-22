@@ -55,8 +55,8 @@ train_ds_not_augmented = image_dataset_from_directory(
     shuffle=True,
     seed = 42,
     color_mode='grayscale'
-    
 )
+
 
 
 # %%
@@ -111,7 +111,6 @@ class SparseF1Score(tf.keras.metrics.F1Score):
     def update_state(self, y_true, y_pred, sample_weight=None):
         y_true = tf.one_hot(tf.cast(tf.reshape(y_true, [-1]), tf.int32), depth=self.num_classes_)
         return super().update_state(y_true, y_pred, sample_weight)
-    
 
 # %%
 from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping
@@ -190,38 +189,17 @@ layer9 = MaxPooling2D(
     name='max_pooling_layer3'
 )
 
-#layer 10 à 12
-layer10 = Conv2D(
-    filters=256,
-    kernel_size=(3, 3),
-    padding='same',
-    activation='relu',
-    name='conv_layer4',
-    kernel_regularizer=l2(1e-4)
-)
+#layer 10 à 13 (tête de classification)
+layer10 = GlobalAveragePooling2D()
+layer11 = Dropout(rate=0.3)
 
-layer11=BatchNormalization(name="BatchNormalization4")
-
-layer12 = MaxPooling2D(
-    pool_size=(2, 2),
-    name='max_pooling_layer4'
-)
-
-
-#layer 14 à 18
-layer13 = GlobalAveragePooling2D()
-layer14 = Dropout(rate=0.3)
-
-#layer15 = Flatten()
-
-layer15 = Dense(
+layer12 = Dense(
     units=128,
     activation='relu',
     name='dense_hidden_layer'
-    
 )
 
-layer16 = Dropout(rate=0.3)
+layer13 = Dropout(rate=0.3)
 
 output_layer = Dense(
     units=4,
@@ -246,10 +224,6 @@ x = layer10(x)
 x = layer11(x)
 x = layer12(x)
 x = layer13(x)
-x = layer14(x)
-x = layer15(x)
-x = layer16(x)
-#x = layer17(x)
 
 
 # Création du modèle
@@ -258,7 +232,7 @@ model = Model(inputs=inputs, outputs=outputs)
 
 # %%
 
-import keras
+
 model.compile(loss='sparse_categorical_crossentropy', # fonction de perte
               optimizer='adam',                # algorithme d'optimisation
               metrics=[SparseF1Score(num_classes=4, average='macro', name='f1_score')])            # métrique d'évaluation
@@ -269,10 +243,10 @@ model_history = model.fit(train_ds,
                           callbacks = [reduce_learning_rate,
                                        early_stopping,
                                        time_callback],
-#                          class_weight=class_weight_dict,  # <-- ajouté             
+                          class_weight=class_weight_dict,  # <-- ajouté             
                           shuffle=False) 
 
-model.save('cnn_256_l2.keras')
+model.save('cnn_128_l2_weight.keras')
 
 
 
@@ -299,9 +273,8 @@ plt.legend()
 
 
 
-# Sauvegarde
-plt.savefig('cnn_256_l2.png')
-np.save('cnn_256_l2.npy',model_history.history)
+plt.savefig('cnn_128_l2_weight.png')
+np.save('cnn_128_l2_weight.npy',model_history.history)
 
 # Affichage de la figure
 plt.show()
