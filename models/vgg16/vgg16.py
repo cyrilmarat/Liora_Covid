@@ -207,28 +207,51 @@ model.save('vgg16_finetuned.keras')
 
 
 
-# %%
+plt.figure()
+plt.xlabel('Epochs')
+plt.ylabel('f1_score')
+
+# Courbe de la précision sur l'échantillon d'entrainement (phase de fine-tuning)
+plt.plot(
+         model_history.history['f1_score'],
+         label='Training f1_score (head)',
+         color='blue')
+
+# Courbe de la précision sur l'échantillon de validation (phase de fine-tuning)
+plt.plot(
+         model_history.history['val_f1_score'],
+         label='Validation f1_score (head)',
+         color='red')
+
+# Affichage de la légende
+plt.legend()
+
+plt.savefig('vgg16_head.png')
+
+
 # Labels des axes
+plt.figure()
 plt.xlabel('Epochs')
 plt.ylabel('f1_score')
 
 # Courbe de la précision sur l'échantillon d'entrainement (phase de fine-tuning)
 plt.plot(
          fine_tune_history.history['f1_score'],
-         label='Training f1_score',
+         label='Training f1_score (fine tuned)',
          color='blue')
 
 # Courbe de la précision sur l'échantillon de validation (phase de fine-tuning)
 plt.plot(
          fine_tune_history.history['val_f1_score'],
-         label='Validation f1_score',
+         label='Validation f1_score (fine tuned)',
          color='red')
 
 # Affichage de la légende
 plt.legend()
 
-plt.savefig('vgg16.png')
-np.save('vgg16.npy',model_history.history)
+plt.savefig('vgg16_finetune.png')
+np.save('vgg16_head.npy', model_history.history)
+np.save('vgg16_finetuned.npy', fine_tune_history.history)
 
 # Affichage de la figure
 plt.show()
