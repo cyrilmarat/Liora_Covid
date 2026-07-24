@@ -101,4 +101,5 @@ dependencies:
       - pyparsing==3.3.2
       - pytest==9.0.3
       - seaborn==0.13.2
+      - xgboost==3.3.0
 prefix: /home/cyril/anaconda3/envs/myenv
