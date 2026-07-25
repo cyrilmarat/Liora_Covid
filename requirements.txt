@@ -29,6 +29,7 @@ hyperframe @ file:///home/conda/feedstock_root/build_artifacts/hyperframe_173761
 idna @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_idna_1781620148/work
 importlib_metadata @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_importlib-metadata_1779714582/work
 ipykernel==7.3.0
+ipynbname==2025.8.0.0
 ipython==9.15.0
 ipython_pygments_lexers==1.1.1
 jedi==0.20.0
