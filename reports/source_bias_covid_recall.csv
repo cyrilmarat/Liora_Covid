@@ -1,0 +1,5 @@
+source,"Regression logistique (GridSearch best, OneVsRest)",KNN (GridSearch best),SVM (GridSearch best),"Random Forest (GridSearch best, balanced)","XGBoost (GridSearch best, balanced)",n
+Eurorad,0.0,0.0,0.267,0.367,0.267,30
+Github,0.049,0.066,0.328,0.23,0.098,61
+PadChest,0.099,0.052,0.302,0.284,0.043,232
+SIRM,0.214,0.143,0.143,0.214,0.214,14
