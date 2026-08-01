@@ -31,7 +31,7 @@ tf.config.list_physical_devices('GPU')
 # et attend des images RGB (3 canaux) -> color_mode='rgb'
 
 train_ds = image_dataset_from_directory(
-    directory="../../../COVID-19_Radiography_Dataset_split/train_augmented/",
+    directory="../../../COVID-19_Radiography_Dataset_split_3classes/train_augmented/",
     image_size=(224, 224),
     batch_size=32,
     labels="inferred",
@@ -41,7 +41,7 @@ train_ds = image_dataset_from_directory(
 )
 
 train_ds_not_augmented = image_dataset_from_directory(
-    directory="../../../COVID-19_Radiography_Dataset_split/train/",                                 
+    directory="../../../COVID-19_Radiography_Dataset_split_3classes/train/",
     image_size=(224, 224),
     batch_size = 32,
     labels="inferred",
@@ -53,7 +53,7 @@ train_ds_not_augmented = image_dataset_from_directory(
 
 # %%
 val_ds = image_dataset_from_directory(
-    directory="../../../COVID-19_Radiography_Dataset_split/validation/",
+    directory="../../../COVID-19_Radiography_Dataset_split_3classes/validation/",
     image_size=(224, 224),
     batch_size=32,
     labels="inferred",
@@ -63,7 +63,7 @@ val_ds = image_dataset_from_directory(
 
 # %%
 test_ds = image_dataset_from_directory(
-    directory="../../../COVID-19_Radiography_Dataset_split/test/",
+    directory="../../../COVID-19_Radiography_Dataset_split_3classes/test/",
     image_size=(224, 224),
     batch_size=32,
     labels="inferred",
@@ -176,7 +176,7 @@ model_history = model.fit(train_ds,
                           class_weight=class_weight_dict,  # <-- ajouté             
                           shuffle=False) 
 
-model.save('vgg16_head_16072026_v3.keras')
+model.save('vgg16_head_3classes.keras')
 
 # %%
 # Phase 2  : fine-tuning — on dégèle le dernier bloc convolutif du base_model
@@ -203,7 +203,7 @@ fine_tune_history = model.fit(train_ds,
                               class_weight=class_weight_dict,  # <-- ajouté
                               shuffle=False)
 
-model.save('vgg16_finetuned.keras')
+model.save('vgg16_finetuned_3classes.keras')
 
 
 
@@ -226,7 +226,7 @@ plt.plot(
 # Affichage de la légende
 plt.legend()
 
-plt.savefig('vgg16_head.png')
+plt.savefig('vgg16_head_3classes.png')
 
 
 # Labels des axes
@@ -249,9 +249,9 @@ plt.plot(
 # Affichage de la légende
 plt.legend()
 
-plt.savefig('vgg16_finetune.png')
-np.save('vgg16_head.npy', model_history.history)
-np.save('vgg16_finetuned.npy', fine_tune_history.history)
+plt.savefig('vgg16_finetune_3classes.png')
+np.save('vgg16_head_3classes.npy', model_history.history)
+np.save('vgg16_finetuned_3classes.npy', fine_tune_history.history)
 
 # Affichage de la figure
 plt.show()
