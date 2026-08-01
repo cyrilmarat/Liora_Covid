@@ -179,7 +179,7 @@ model_history = model.fit(train_ds,
 model.save('vgg16_head_16072026_v3.keras')
 
 # %%
-# Phase 2 (optionnelle) : fine-tuning — on dégèle le dernier bloc convolutif du base_model
+# Phase 2  : fine-tuning — on dégèle le dernier bloc convolutif du base_model
 # et on ré-entraîne avec un learning rate faible pour affiner les features à la marge
 base_model.trainable = True
 
