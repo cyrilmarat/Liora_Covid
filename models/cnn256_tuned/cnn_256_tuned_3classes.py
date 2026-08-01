@@ -44,7 +44,7 @@ tf.config.list_physical_devices('GPU')
 
 # %%
 train_ds = image_dataset_from_directory(
-    directory="../../../COVID-19_Radiography_Dataset_split/train_augmented/",                                 
+    directory="../../../COVID-19_Radiography_Dataset_split_3classes/train_augmented/",                                 
     image_size=(299, 299),
     batch_size = 32,
     labels="inferred",
@@ -56,7 +56,7 @@ train_ds = image_dataset_from_directory(
 
 # %%
 train_ds_not_augmented = image_dataset_from_directory(
-    directory="../../../COVID-19_Radiography_Dataset_split/train/",                                 
+    directory="../../../COVID-19_Radiography_Dataset_split_3classes/train/",                                 
     image_size=(299, 299),
     batch_size = 32,
     labels="inferred",
@@ -69,7 +69,7 @@ train_ds_not_augmented = image_dataset_from_directory(
 
 # %%
 val_ds = image_dataset_from_directory(
-    directory="../../../COVID-19_Radiography_Dataset_split/validation/",                                 
+    directory="../../../COVID-19_Radiography_Dataset_split_3classes/validation/",                                 
     image_size=(299, 299),
     batch_size = 32,
     labels="inferred",
@@ -82,7 +82,7 @@ val_ds = image_dataset_from_directory(
 
 # %%
 test_ds = image_dataset_from_directory(
-    directory="../../../COVID-19_Radiography_Dataset_split/test/",                                 
+    directory="../../../COVID-19_Radiography_Dataset_split_3classes/test/",                                 
     image_size=(299, 299),
     batch_size = 32,
     labels="inferred",
@@ -280,7 +280,7 @@ model_history = model.fit(train_ds,
 #                          class_weight=class_weight_dict,  # <-- ajouté             
                           shuffle=False) 
 
-model.save('cnn_256_tuned.keras')
+model.save('cnn_256_3classes.keras')
 
 
 
@@ -308,8 +308,8 @@ plt.legend()
 
 
 # Sauvegarde
-plt.savefig('cnn_256_tuned.png')
-np.save('cnn_256_tuned.npy',model_history.history)
+plt.savefig('cnn_256_3classes.png')
+np.save('cnn_256_3classes.npy',model_history.history)
 
 # Affichage de la figure
 plt.show()
