@@ -1,2 +1,0 @@
-Meilleur score CV F1 macro : 0.520075
-Meilleurs paramètres : {'model__max_depth': 15, 'model__max_features': 'sqrt', 'model__min_samples_leaf': 5, 'model__min_samples_split': 15, 'model__n_estimators': 200}
