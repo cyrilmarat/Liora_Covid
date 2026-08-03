@@ -2,16 +2,16 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
-
+import seaborn as sns
 import tensorflow as tf
 import keras
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image_dataset_from_directory
-
+from pathlib import Path
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn import metrics
 import cv2 #import OpenCV
-
+import random
 
 # --------------------------------------------------------------------------- #
 # Chemins
@@ -20,11 +20,19 @@ model_path = "../../models/cnn256/cnn_256.keras"
 val_dir ="../../../COVID-19_Radiography_Dataset_split/validation/"  
 test_dir = "../../../COVID-19_Radiography_Dataset_split/test/"
     
+images_dir = "../../../COVID-19_Radiography_Dataset/"
 
 
+covid_images = list(Path(images_dir, "COVID/images").glob("*.png"))
+normal_images = list(Path(images_dir, "Normal/images").glob("*.png"))
+lung_images = list(Path(images_dir, "Lung_Opacity/images").glob("*.png"))
+viral_images = list(Path(images_dir, "Viral_Pneumonia/images").glob("*.png"))
 
-
-
+# --------------------------------------------------------------------------- #
+# Definitions globales
+# --------------------------------------------------------------------------- #
+classes = ["COVID", "Normal", "Lung_Opacity", "Viral Pneumonia"]
+size_img=299
 
 # --------------------------------------------------------------------------- #
 # Métrique custom nécessaire pour désérialiser le modèle 
@@ -100,10 +108,69 @@ def evaluer(y_true, y_pred, class_names, titre):
 # --------------------------------------------------------------------------- #
 
 st.sidebar.title("Sommaire")
-pages=["Exploration", "DataVizualization", "Modélisation"]
+pages=["Introduction", "DataVisualisation", "Feature Extraction", "Modèle SVM", "Modèle CNN 4 niveaux"]
 page=st.sidebar.radio("Aller vers", pages)
 
+if page == pages[0]:
+    st.write("### Introduction")
+    st.write("""L'expansion rapide de l'épidémie de COVID-19 a très vite mis les systèmes de santé sous tension. Cet épisode a montré la nécessité d'obtenir un 
+        diagnostic de manière instantanée et fiable. Celui-ci repose principalement sur le technique RT-PCR (Reverse Transcription Polymerase Chain Reaction), mais des études ont aussi mis en évidence certaines limites de cette technique.
+        C'est pourquoi, l'imagerie médicale est apparue comme un outil complémentaire intéressant pour détecter les cas COVID.""")
+    st.write("""Notre projet propose de développer un modèle de classification automatique de radiographies pulmonaires capable de distinguer les cas COVID-19 des autres pathologies pulmonaires (pneumonie virale, opacité pulmonaire) et des poumons sains. Afin de répondre à cet objectif, nous disposions d'un jeu de données disponible ici :""")
+    st.page_link("https://www.kaggle.com/datasets/tawsifurrahman/covid19-radiography-database", label="COVID-19 Radiography Database")
+    
+
+
+if page == pages[1] : 
+    
+    st.write("### Premier niveau d'analyse")
+
+    st.write(f"Le jeu de données dont nous disposons contient 20 835 images réparties en 4 classes : Covid, Lung Opacity, Normal, Viral Pneumonia")
+
+    st.write(f"Le jeu de données contient : \
+        {len(normal_images)} images normales, \
+        {len(covid_images)} images Covid, \
+        {len(lung_images)} images Lung Opacity, \
+        {len(viral_images)} images Viral pneumonia.")
+
+    st.write("Les images COVID-19 proviennent de sources hétérogènes (PadChest, GitHub, SIRM, et autres dépôts publics), tandis que les classes Normal, Lung Opacity et Viral Pneumonia sont issues de bases de données uniques (RSNA, Kaggle).")
+
+    st.write("#### Exemples d'images du dataset et les masques associés")
+    fig=plt.figure (figsize=(8,16))
+
+    for i, classe in enumerate(classes):
+        dossier_images=Path(images_dir)/classe/"images"
+        dossier_masques=Path(images_dir)/classe/"masks"
+
+        image_path = random.choice(list(dossier_images.glob("*.png")))
+        mask_path = dossier_masques / image_path.name
+
+        image=cv2.imread(image_path)
+        masque=cv2.imread(mask_path)
+
+        plt.subplot(4,2,2*i+1)
+        plt.imshow(image)
+        plt.axis("off")
+        plt.title(f"Classe : {classe}")
+
+        plt.subplot(4,2,2*i+2)
+        plt.imshow(masque)
+        plt.axis("off")
+        plt.title(f"Classe : {classe}")
+
+    st.pyplot(fig)
+
 if page == pages[2] : 
+    st.write("### Feature Extraction")
+
+
+if page == pages[3] : 
+    st.write("### Modèle SVM")
+    
+
+
+if page == pages[4] : 
+    st.write("### Modèle CNN 4 niveaux")
     try:
         model_loaded = get_model(model_path)
     except Exception as e:
@@ -116,8 +183,8 @@ if page == pages[2] :
         st.code("\n".join(summary_lines))
 
     try:
-        val_ds = get_dataset(val_dir, img_h=299,img_w=299, batch_size=32, color_mode='grayscale')
-        test_ds = get_dataset(test_dir,img_h=299,img_w=299,  batch_size=32, color_mode='grayscale')
+        val_ds = get_dataset(val_dir, img_h=size_img,img_w=size_img, batch_size=32, color_mode='grayscale')
+        test_ds = get_dataset(test_dir,img_h=size_img,img_w=size_img,  batch_size=32, color_mode='grayscale')
     except Exception as e:
         st.error(f"Impossible de charger les jeux de données : {e}")
         st.stop()
