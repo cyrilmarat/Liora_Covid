@@ -12,15 +12,19 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 from sklearn import metrics
 import cv2 #import OpenCV
 import random
+import joblib
 
 # --------------------------------------------------------------------------- #
 # Chemins
 # --------------------------------------------------------------------------- #
-model_path = "../../models/cnn256/cnn_256.keras"    
+model_CNN_path = "../../models/cnn256/cnn_256.keras"    
 val_dir ="../../../COVID-19_Radiography_Dataset_split/validation/"  
 test_dir = "../../../COVID-19_Radiography_Dataset_split/test/"
-    
+model_SVM_path = "../../models/svm/svm_weighted.joblib" 
+scaler_SVM_path = "../../models/svm/scaler_svm.joblib"  
 images_dir = "../../../COVID-19_Radiography_Dataset/"
+csv_test="../../../features/test_features.csv"
+csv_validation="../../../features/validation_features.csv"
 
 
 covid_images = list(Path(images_dir, "COVID/images").glob("*.png"))
@@ -63,9 +67,18 @@ st.caption("COVID / NORMAL / LUNG_OPACITY / VIRAL_PNEUMONIA")
 # --------------------------------------------------------------------------- #
 # Fonctions mises en cache
 # --------------------------------------------------------------------------- #
-@st.cache_resource(show_spinner="Chargement du modèle…")
-def get_model(path: str):
+@st.cache_resource(show_spinner="Chargement du modèle CNN …")
+def get_model_CNN(path: str):
     return load_model(path)
+
+@st.cache_resource(show_spinner="Chargement du modèle SVM …")
+def get_model_SVM(path: str):
+    return joblib.load(path)
+
+@st.cache_resource(show_spinner="Chargement du scaler SVM …")
+def get_scaler_SVM(path: str):
+    return joblib.load(path)
+
 
 
 @st.cache_resource(show_spinner="Chargement du jeu de données…")
@@ -111,6 +124,10 @@ st.sidebar.title("Sommaire")
 pages=["Introduction", "DataVisualisation", "Feature Extraction", "Modèle SVM", "Modèle CNN 4 niveaux"]
 page=st.sidebar.radio("Aller vers", pages)
 
+
+# --------------------------------------------------------------------------- #
+# Introduction
+# --------------------------------------------------------------------------- #
 if page == pages[0]:
     st.write("### Introduction")
     st.write("""L'expansion rapide de l'épidémie de COVID-19 a très vite mis les systèmes de santé sous tension. Cet épisode a montré la nécessité d'obtenir un 
@@ -120,7 +137,9 @@ if page == pages[0]:
     st.page_link("https://www.kaggle.com/datasets/tawsifurrahman/covid19-radiography-database", label="COVID-19 Radiography Database")
     
 
-
+# --------------------------------------------------------------------------- #
+# DataVisualisation
+# --------------------------------------------------------------------------- #
 if page == pages[1] : 
     
     st.write("### Premier niveau d'analyse")
@@ -160,21 +179,70 @@ if page == pages[1] :
 
     st.pyplot(fig)
 
+# --------------------------------------------------------------------------- #
+# Feature Extraction
+# --------------------------------------------------------------------------- #
 if page == pages[2] : 
     st.write("### Feature Extraction")
 
-
+# --------------------------------------------------------------------------- #
+# Modèle SVM
+# --------------------------------------------------------------------------- #
 if page == pages[3] : 
     st.write("### Modèle SVM")
-    
+
+    try:
+        model_loaded = get_model_SVM(model_SVM_path)
+    except Exception as e:
+        st.error(f"Impossible de charger le modèle SVM: {e}")
+        st.stop()
+
+    try:
+        scaler_loaded = get_scaler_SVM(scaler_SVM_path)
+    except Exception as e:
+        st.error(f"Impossible de charger le scaler SVM : {e}")
+        st.stop()
+
+    try:
+        df_test = pd.read_csv(csv_test)
+        df_validation = pd.read_csv(csv_validation)
+    except Exception as e:
+        st.error(f"Impossible de charger les fichiers de features : {e}")
+        st.stop()
+
+    X_test = df_test.drop(['filename', 'classe'], axis=1)
+    y_test = df_test['classe']
+
+    X_val = df_validation.drop(['filename', 'classe'], axis=1)
+    y_val = df_validation['classe']
+
+    X_test_scaled = scaler_loaded.transform(X_test)
+    X_val_scaled = scaler_loaded.transform(X_val)
+
+    with st.spinner("Prédiction sur le jeu de test…"):
+        test_pred_class = model_loaded.predict(X_test_scaled)
+
+    with st.spinner("Prédiction sur le jeu de validation…"):
+        val_pred_class = model_loaded.predict(X_val_scaled)
+
+    class_names = sorted(y_test.unique())
+
+    tab_val, tab_test = st.tabs(["Validation", "Test"])
+    with tab_val:
+        evaluer(y_val, val_pred_class, class_names, "Résultats — Validation")
+    with tab_test:
+        evaluer(y_test, test_pred_class, class_names, "Résultats — Test")
 
 
+# --------------------------------------------------------------------------- #
+# Modèle CNN
+# --------------------------------------------------------------------------- #
 if page == pages[4] : 
     st.write("### Modèle CNN 4 niveaux")
     try:
-        model_loaded = get_model(model_path)
+        model_loaded = get_model_CNN(model_CNN_path)
     except Exception as e:
-        st.error(f"Impossible de charger le modèle : {e}")
+        st.error(f"Impossible de charger le modèle  CNN256 : {e}")
         st.stop()
 
     with st.expander("📋 Résumé du modèle"):
