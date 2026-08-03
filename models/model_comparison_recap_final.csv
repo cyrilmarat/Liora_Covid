@@ -20,9 +20,9 @@ CovidNet,0.84,,non disponible
 EfficientNet,0.82,,non (gap F1 train-val +0.02)
 CNN v1 (from scratch),0.79,,non disponible
 CNN 1 couche,0.68,0.75,non (gap F1 train-val -0.05)
-SVM (GridSearch best),0.59,0.66,oui (gap F1 train-val +0.19)
+SVM (GridSearch best),0.61,0.57,non disponible
+SVM (GridSearch best),0.59,0.66,non disponible
 "Random Forest (GridSearch best, balanced)",0.49,0.57,oui (gap F1 train-val +0.26)
-SVM (GridSearch best),0.47,0.54,oui (gap F1 train-val +0.19)
 "XGBoost (baseline, sans ponderation)",0.47,0.6,oui (gap F1 train-val +0.22)
 "XGBoost (GridSearch best, balanced)",0.47,0.54,léger (gap F1 train-val +0.04)
 KNN (GridSearch best),0.46,0.6,léger (gap F1 train-val +0.07)

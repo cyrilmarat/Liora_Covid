@@ -1,5 +1,5 @@
-source,"Regression logistique (GridSearch best, OneVsRest)",KNN (GridSearch best),SVM (GridSearch best),"Random Forest (GridSearch best, balanced)","XGBoost (GridSearch best, balanced)",n
-Eurorad,0.0,0.0,0.267,0.367,0.267,30
-Github,0.049,0.066,0.328,0.23,0.098,61
-PadChest,0.099,0.052,0.302,0.284,0.043,232
-SIRM,0.214,0.143,0.143,0.214,0.214,14
+source,"Regression logistique (GridSearch best, OneVsRest)","Regression logistique (sans ponderation, OneVsRest)","Regression logistique (balanced, OneVsRest)",KNN (GridSearch best),KNN (baseline),"Random Forest (GridSearch best, balanced)","Random Forest (sans ponderation, validation)","XGBoost (GridSearch best, balanced)","XGBoost (baseline, sans ponderation)",n
+Eurorad,0.0,0.0,0.167,0.0,0.2,0.367,0.233,0.267,0.267,30
+Github,0.049,0.0,0.23,0.066,0.23,0.23,0.148,0.098,0.18,61
+PadChest,0.099,0.0,0.095,0.052,0.159,0.284,0.056,0.043,0.078,232
+SIRM,0.214,0.0,0.071,0.143,0.214,0.214,0.143,0.214,0.286,14

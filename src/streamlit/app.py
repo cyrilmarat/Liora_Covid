@@ -7,11 +7,8 @@ import tensorflow as tf
 import keras
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image_dataset_from_directory
-from pathlib import Path
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn import metrics
-import cv2 #import OpenCV
-import random
 import joblib
 
 # --------------------------------------------------------------------------- #
@@ -20,22 +17,14 @@ import joblib
 model_CNN_path = "../../models/cnn256/cnn_256.keras"    
 val_dir ="../../../COVID-19_Radiography_Dataset_split/validation/"  
 test_dir = "../../../COVID-19_Radiography_Dataset_split/test/"
-model_SVM_path = "../../models/svm/svm_weighted.joblib" 
-scaler_SVM_path = "../../models/svm/scaler_svm.joblib"  
-images_dir = "../../../COVID-19_Radiography_Dataset/"
+model_SVM_path = "../../models/svm/svm_weighted.joblib"
+scaler_SVM_path = "../../models/svm/scaler_svm.joblib"
 csv_test="../../../features/test_features.csv"
 csv_validation="../../../features/validation_features.csv"
-
-
-covid_images = list(Path(images_dir, "COVID/images").glob("*.png"))
-normal_images = list(Path(images_dir, "Normal/images").glob("*.png"))
-lung_images = list(Path(images_dir, "Lung_Opacity/images").glob("*.png"))
-viral_images = list(Path(images_dir, "Viral_Pneumonia/images").glob("*.png"))
 
 # --------------------------------------------------------------------------- #
 # Definitions globales
 # --------------------------------------------------------------------------- #
-classes = ["COVID", "Normal", "Lung_Opacity", "Viral Pneumonia"]
 size_img=299
 
 # --------------------------------------------------------------------------- #
@@ -58,7 +47,7 @@ class SparseF1Score(tf.keras.metrics.F1Score):
 # Config page
 # --------------------------------------------------------------------------- #
 st.set_page_config(page_title=" Classification de Radios pulmonaires", layout="wide")
-st.title("🫁 Classification de radios pulmonaires")
+st.title("🫁 Classification de radiographies pulmonaires")
 st.caption("COVID / NORMAL / LUNG_OPACITY / VIRAL_PNEUMONIA")
 
 
@@ -121,7 +110,7 @@ def evaluer(y_true, y_pred, class_names, titre):
 # --------------------------------------------------------------------------- #
 
 st.sidebar.title("Sommaire")
-pages=["Introduction", "DataVisualisation", "Feature Extraction", "Modèle SVM", "Modèle CNN 4 niveaux"]
+pages=["1.Introduction", "2.Données & Visualisation", "3.Preprocessing", "4.Vers la modélisation", "5.Modèles & résultats", "6.ML: Modèle SVM", "7.DL: Modèle CNN 4 niveaux", "8.Biais de source", "9.Analyse du meilleur modèle", "10.Conclusion", "11.Limites & perspectives"]
 page=st.sidebar.radio("Aller vers", pages)
 
 
@@ -129,16 +118,35 @@ page=st.sidebar.radio("Aller vers", pages)
 # Introduction
 # --------------------------------------------------------------------------- #
 if page == pages[0]:
-    st.write("### Introduction")
+    st.subheader("Contexte & enjeux")
     st.write("""L'expansion rapide de l'épidémie de COVID-19 a très vite mis les systèmes de santé sous tension. Cet épisode a montré la nécessité d'obtenir un 
         diagnostic de manière instantanée et fiable. Celui-ci repose principalement sur le technique RT-PCR (Reverse Transcription Polymerase Chain Reaction), mais des études ont aussi mis en évidence certaines limites de cette technique.
         C'est pourquoi, l'imagerie médicale est apparue comme un outil complémentaire intéressant pour détecter les cas COVID.""")
+    st.markdown(
+            """
+    **L'imagerie thoracique (radiographie) s'impose comme un outil complémentaire** : rapide,
+    peu coûteuse, largement disponible — mais son interprétation reste complexe et demande
+    l'expertise d'un radiologue.
+    
+    ### Objectif du projet
+    Développer un modèle de **classification automatique** de radiographies pulmonaires capable
+    de distinguer 4 catégories :
+    - **COVID-19**
+    - **Opacité pulmonaire** (Lung Opacity)
+    - **Poumon normal**
+    - **Pneumonie virale**
+    
+    ### Enjeu métier
+    Un outil d'aide au **dépistage**, où le critère prioritaire n'est pas la performance globale
+    mais bien la capacité à **ne pas manquer un cas COVID** (rappel/recall sur cette classe).
+            """
+        )
     st.write("""Notre projet propose de développer un modèle de classification automatique de radiographies pulmonaires capable de distinguer les cas COVID-19 des autres pathologies pulmonaires (pneumonie virale, opacité pulmonaire) et des poumons sains. Afin de répondre à cet objectif, nous disposions d'un jeu de données disponible ici :""")
     st.page_link("https://www.kaggle.com/datasets/tawsifurrahman/covid19-radiography-database", label="COVID-19 Radiography Database")
     
 
 # --------------------------------------------------------------------------- #
-# DataVisualisation
+# Données
 # --------------------------------------------------------------------------- #
 if page == pages[1] : 
     
@@ -146,39 +154,13 @@ if page == pages[1] :
 
     st.write(f"Le jeu de données dont nous disposons contient 20 835 images réparties en 4 classes : Covid, Lung Opacity, Normal, Viral Pneumonia")
 
-    st.write(f"Le jeu de données contient : \
-        {len(normal_images)} images normales, \
-        {len(covid_images)} images Covid, \
-        {len(lung_images)} images Lung Opacity, \
-        {len(viral_images)} images Viral pneumonia.")
+    st.image("distribution.png", caption="Répartition des classes")
 
     st.write("Les images COVID-19 proviennent de sources hétérogènes (PadChest, GitHub, SIRM, et autres dépôts publics), tandis que les classes Normal, Lung Opacity et Viral Pneumonia sont issues de bases de données uniques (RSNA, Kaggle).")
 
     st.write("#### Exemples d'images du dataset et les masques associés")
-    fig=plt.figure (figsize=(8,16))
+    st.image("../../reports/figures/exemples_images_masques.png")
 
-    for i, classe in enumerate(classes):
-        dossier_images=Path(images_dir)/classe/"images"
-        dossier_masques=Path(images_dir)/classe/"masks"
-
-        image_path = random.choice(list(dossier_images.glob("*.png")))
-        mask_path = dossier_masques / image_path.name
-
-        image=cv2.imread(image_path)
-        masque=cv2.imread(mask_path)
-
-        plt.subplot(4,2,2*i+1)
-        plt.imshow(image)
-        plt.axis("off")
-        plt.title(f"Classe : {classe}")
-
-        plt.subplot(4,2,2*i+2)
-        plt.imshow(masque)
-        plt.axis("off")
-        plt.title(f"Classe : {classe}")
-
-    st.pyplot(fig)
-    
     st.write("### Distribution des pixels par classe")
     col1, col2 , col3, col4= st.columns(4)
     with col1:
@@ -223,11 +205,10 @@ if page == pages[1] :
     st.write("- Viral Pneumonia : 32 outliers (MSE > 3 000)")
     st.write("Les distances sont calculées en travaillant sur une image redimensionnée à 50x50 pixels")
 
-
 # --------------------------------------------------------------------------- #
 # Feature Extraction
 # --------------------------------------------------------------------------- #
-if page == pages[2] : 
+if page == pages[2] :
     st.write("### Feature Extraction")
     
     features = pd.DataFrame({"Features":[
@@ -275,13 +256,79 @@ if page == pages[2] :
     
     st.write("Deux stratégies ont été définies pour prendre en compte le déséquilibre des classes constaté lors de l'étape d'analyse :")
     st.table(strategies_analyse)
-    
+
+
+# --------------------------------------------------------------------------- #
+# Vers la modélisation
+# --------------------------------------------------------------------------- #
+if page == pages[3] :
+    st.write("### Preprocessing")
+
+    st.markdown(
+        """
+- **Segmentation pulmonaire** : application du masque fourni avec le dataset (généré par
+  un U-Net par les auteurs), pour isoler la zone pulmonaire et limiter le biais de source
+  concentré dans le fond des images.
+- **Normalisation de la luminosité** : égalisation d'histogramme puis CLAHE (contraste
+  adaptatif local), pour homogénéiser les images entre sources.
+- **Dédoublonnage** : détection des quasi-doublons par distance MSE à l'image moyenne de
+  la classe.
+- **Split stratifié** 80/10/10 (train / validation / test), graine fixée.
+- **Data augmentation** (train uniquement) : rotation, translation, zoom, flip horizontal —
+  transformations légères pour ne pas altérer les caractéristiques médicales des lésions.
+        """
+    )
+    st.image("../../reports/figures/exemple_pipeline.png", caption="Exemple de preprocessing sur une image COVID", width=650)
+
+    st.write("### Vers la modélisation")
+    st.markdown(
+        """
+Une fois les images préparées, nous avons comparé deux familles d'approches pour la classification :
+
+**Machine Learning classique** — entraîné sur les features tabulaires extraites des images
+(luminosité, texture, surface du masque…). Algorithmes testés : SVM, Random Forest, XGBoost,
+KNN, Régression logistique ; nous détaillerons le **SVM**, notre meilleur modèle ML.
+
+**Deep Learning** — entraîné directement sur les images brutes, sans extraction manuelle de
+features. Architectures testées : CNN (plusieurs profondeurs), DenseNet, VGG16, Inception V3,
+ResNet50, ResNet101V2, CovidNet, EfficientNet ; nous détaillerons le **CNN à 4 niveaux**, le
+modèle retenu.
+
+Métrique de comparaison retenue : **F1-macro**, pour ne pas favoriser la classe majoritaire
+et bien évaluer la détection de la classe COVID (minoritaire).
+        """
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Modèles & résultats
+# --------------------------------------------------------------------------- #
+if page == pages[4] :
+    st.write("### Modèles entraînés & résultats")
+
+    st.markdown(
+        """
+Deux familles de modèles comparées : **Machine Learning classique** (sur descripteurs
+tabulaires) et **Deep Learning** (directement sur les images). Métrique de référence :
+**F1-macro**, qui ne se laisse pas tirer vers le haut par la classe majoritaire et
+pénalise un modèle qui rate une classe minoritaire comme COVID.
+
+Un **DummyClassifier** (aucun apprentissage réel) sert de plancher de référence :
+F1-macro de 0,16 à 0,25 selon la stratégie — tout modèle utile doit largement le dépasser.
+        """
+    )
+    st.image("../../reports/figures/rpt_f1_global.png", caption="F1-macro — comparaison Machine Learning vs Deep Learning (test)")
+
+    st.write("#### Tableau récapitulatif final")
+    recap = pd.read_csv("../../models/model_comparison_recap_final.csv")
+    st.dataframe(recap, hide_index=True, use_container_width=True, height=420)
+
 
 # --------------------------------------------------------------------------- #
 # Modèle SVM
 # --------------------------------------------------------------------------- #
-if page == pages[3] : 
-    st.write("### Modèle SVM")
+if page == pages[5] :
+    st.write("### ML Modèle SVM")
 
     try:
         model_loaded = get_model_SVM(model_SVM_path)
@@ -329,8 +376,8 @@ if page == pages[3] :
 # --------------------------------------------------------------------------- #
 # Modèle CNN
 # --------------------------------------------------------------------------- #
-if page == pages[4] : 
-    st.write("### Modèle CNN 4 niveaux")
+if page == pages[6] :
+    st.write("### DL Modèle CNN 4 niveaux")
     try:
         model_loaded = get_model_CNN(model_CNN_path)
     except Exception as e:
@@ -367,4 +414,103 @@ if page == pages[4] :
         evaluer(y_true_val_class, val_pred_class, class_names, "Résultats — Validation")
     with tab_test:
         evaluer(y_true_test_class, test_pred_class, class_names, "Résultats — Test")
+
+
+# --------------------------------------------------------------------------- #
+# Biais de source
+# --------------------------------------------------------------------------- #
+if page == pages[7] :
+    st.write("### Biais de source dans les modèles")
+    st.markdown(
+        """
+Les images COVID proviennent de 4 sources hétérogènes (SIRM, Github, PadChest, Eurorad).
+L'EDA seule ne suffit pas : on a vérifié si les **modèles** performent différemment selon
+la source de l'image, pas seulement si les images elles-mêmes diffèrent statistiquement.
+        """
+    )
+    st.image("../../reports/figures/source_bias_covid_recall.png", width=750)
+    st.caption(
+        "Rappel COVID très variable selon la source pour les modèles Machine Learning "
+        "(à nuancer : Eurorad n=30 et SIRM n=14 sont de petits effectifs)."
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Analyse du meilleur modèle
+# --------------------------------------------------------------------------- #
+if page == pages[8] :
+    st.write("### Analyse du modèle retenu — CNN 4 couches (tuned)")
+
+    st.markdown(
+        """
+**Modèle retenu : CNN 4 couches (tuned)** — F1-macro 0,90 (légèrement en retrait sur ce
+seul critère face à CNN 5 couches et DenseNet, tous deux à 0,92), mais choisi pour deux
+raisons prioritaires pour un outil de dépistage :
+- **Meilleur rappel COVID de tous les modèles testés : 93,5 %**
+- **Surapprentissage plus contenu** (écart train/validation +0,06, contre +0,08 pour le
+  CNN 5 couches)
+        """
+    )
+    col1, col2 = st.columns(2)
+    with col1:
+        st.image("../../reports/figures/cm_deep_learning_normalized.png", caption="Matrices de confusion normalisées — Deep Learning")
+    with col2:
+        st.image("../../reports/figures/rpt_pr_curves_dl.png", caption="Courbes Précision-Rappel — Deep Learning")
+
+    st.write("#### Grad-CAM — où le modèle « regarde »")
+    st.image("../../reports/figures/gradcam_planche.png", caption="Cartes d'activation Grad-CAM par modèle", width=750)
+
+
+# --------------------------------------------------------------------------- #
+# Conclusion
+# --------------------------------------------------------------------------- #
+if page == pages[9] :
+    st.write("### Conclusion")
+
+    st.markdown(
+        """
+Ce projet visait à classer automatiquement des radiographies thoraciques en 4 catégories.
+La démarche a suivi trois grandes étapes : exploration approfondie, pré-processing rigoureux,
+puis modélisation comparant plusieurs familles d'algorithmes.
+
+**Hiérarchie claire des résultats :**
+- Les baselines Machine Learning plafonnent à un F1-macro de 0,61 (SVM, meilleur score) et
+  détectent mal la classe COVID.
+- Les modèles Deep Learning franchissent nettement ce plafond (F1-macro jusqu'à 0,92) et
+  améliorent fortement la détection COVID.
+
+**Modèle retenu : CNN 4 couches (tuned).** Trois modèles partagent le meilleur F1-macro
+(0,92 : CNN 4 couches, CNN 5 couches, DenseNet), mais le CNN 4 couches (tuned) se distingue
+par le **meilleur rappel COVID (93,5 %)** — le critère prioritaire pour un outil de dépistage
+— et un surapprentissage mieux maîtrisé que le CNN 5 couches. DenseNet, à score égal, n'a
+pas été évalué sur ces deux critères dans ce rapport.
+
+Ce compromis précision/rappel devra être calibré selon le contexte clinique visé.
+        """
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Limites & perspectives
+# --------------------------------------------------------------------------- #
+if page == pages[10] :
+    st.write("### Limites & perspectives")
+
+    st.markdown(
+        """
+- **Biais de source** : testé sur les modèles ML classiques (rappel COVID variable selon
+  la source), pas encore étendu aux modèles Deep Learning.
+- **Fuite train/test potentielle** : rien ne garantit qu'un même patient n'apparaît pas à
+  la fois en train et en test (dé-duplication actuelle basée sur la similarité d'image, pas
+  sur l'identité patient).
+- **Calibration du seuil de décision** : le compromis précision/rappel sur COVID n'a pas
+  été calibré pour un contexte clinique précis.
+- **Scoring GridSearch** : confirmé en F1-macro pour SVM et KNN ; à vérifier pour Random
+  Forest et XGBoost.
+- **Transfer learning** : DenseNet, à performance égale au meilleur CNN maison, mériterait
+  une analyse plus poussée (rappel COVID, surapprentissage) avant d'envisager de le retenir.
+- **Validation externe** : le modèle retenu n'a pas été testé sur des données d'une autre
+  origine que ce dataset.
+        """
+    )
 
