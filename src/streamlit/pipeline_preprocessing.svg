@@ -1,0 +1,67 @@
+<svg width="680" height="720" viewBox="0 0 680 720" xmlns="http://www.w3.org/2000/svg">
+<title>Pipeline pre-processing COVID</title>
+<rect width="680" height="720" fill="white"/>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+<path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+</defs>
+
+<text font-family="Arial, sans-serif" font-weight="500" font-size="14" x="340" y="28" text-anchor="middle" fill="#2C2C2A">Pipeline pre-processing</text>
+
+<!-- Images brutes -->
+<rect x="190" y="45" width="300" height="44" rx="8" fill="#F1EFE8" stroke="#888780" stroke-width="0.5"/>
+<text font-family="Arial, sans-serif" font-weight="500" font-size="14" x="340" y="72" text-anchor="middle" fill="#2C2C2A">Images brutes</text>
+<line x1="340" y1="89" x2="340" y2="109" stroke="#888780" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<!-- 1. Doublons -->
+<rect x="190" y="110" width="300" height="44" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+<text font-family="Arial, sans-serif" font-weight="500" font-size="14" x="340" y="137" text-anchor="middle" fill="#712B13">1. Suppression des doublons</text>
+<line x1="340" y1="154" x2="340" y2="174" stroke="#888780" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<!-- 2. Outliers -->
+<rect x="190" y="175" width="300" height="44" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+<text font-family="Arial, sans-serif" font-weight="500" font-size="14" x="340" y="202" text-anchor="middle" fill="#712B13">2. Suppression outliers</text>
+<line x1="340" y1="219" x2="340" y2="239" stroke="#888780" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<!-- 3. Resize -->
+<rect x="190" y="240" width="300" height="44" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+<text font-family="Arial, sans-serif" font-weight="500" font-size="14" x="340" y="267" text-anchor="middle" fill="#085041">3. Resize</text>
+<line x1="340" y1="284" x2="340" y2="304" stroke="#888780" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<!-- 4. Masques -->
+<rect x="190" y="305" width="300" height="44" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+<text font-family="Arial, sans-serif" font-weight="500" font-size="14" x="340" y="332" text-anchor="middle" fill="#085041">4. Application des masques</text>
+<line x1="340" y1="349" x2="340" y2="369" stroke="#888780" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<!-- 5. CLAHE -->
+<rect x="190" y="370" width="300" height="44" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+<text font-family="Arial, sans-serif" font-weight="500" font-size="14" x="340" y="397" text-anchor="middle" fill="#085041">5. Égalisation + CLAHE</text>
+<line x1="340" y1="414" x2="340" y2="434" stroke="#888780" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<!-- 6. Split -->
+<rect x="190" y="435" width="300" height="44" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text font-family="Arial, sans-serif" font-weight="500" font-size="14" x="340" y="462" text-anchor="middle" fill="#26215C">6. Séparation train / val / test</text>
+<line x1="340" y1="479" x2="340" y2="499" stroke="#888780" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<!-- 7. Data augmentation -->
+<rect x="190" y="500" width="300" height="56" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+<text font-family="Arial, sans-serif" font-weight="500" font-size="14" x="340" y="522" text-anchor="middle" fill="#633806">7. Data augmentation</text>
+<text font-family="Arial, sans-serif" font-size="12" x="340" y="542" text-anchor="middle" fill="#854F0B">train uniquement</text>
+<line x1="340" y1="556" x2="340" y2="576" stroke="#888780" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<!-- Dataset prêt -->
+<rect x="190" y="577" width="300" height="44" rx="8" fill="#EAF3DE" stroke="#3B6D11" stroke-width="0.5"/>
+<text font-family="Arial, sans-serif" font-weight="500" font-size="14" x="340" y="604" text-anchor="middle" fill="#27500A">Dataset prêt pour modélisation</text>
+
+<!-- Légende -->
+<rect x="50" y="640" width="14" height="14" rx="3" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+<text font-family="Arial, sans-serif" font-size="12" x="72" y="652" fill="#5F5E5A">Nettoyage</text>
+<rect x="160" y="640" width="14" height="14" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text font-family="Arial, sans-serif" font-size="12" x="182" y="652" fill="#5F5E5A">Séparation</text>
+<rect x="280" y="640" width="14" height="14" rx="3" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+<text font-family="Arial, sans-serif" font-size="12" x="302" y="652" fill="#5F5E5A">Traitement images</text>
+<rect x="430" y="640" width="14" height="14" rx="3" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+<text font-family="Arial, sans-serif" font-size="12" x="452" y="652" fill="#5F5E5A">Train uniquement</text>
+
+</svg>

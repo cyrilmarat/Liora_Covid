@@ -11,7 +11,7 @@ from pathlib import Path
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn import metrics
 import cv2 #import OpenCV
-
+import random
 
 # --------------------------------------------------------------------------- #
 # Chemins
@@ -20,7 +20,7 @@ model_path = "../../models/cnn256/cnn_256.keras"
 val_dir ="../../../COVID-19_Radiography_Dataset_split/validation/"  
 test_dir = "../../../COVID-19_Radiography_Dataset_split/test/"
     
-images_dir = "../../../COVID-19_Radiography_Dataset/test/"
+images_dir = "../../../COVID-19_Radiography_Dataset/"
 
 
 covid_images = list(Path(images_dir, "COVID/images").glob("*.png"))
