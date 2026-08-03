@@ -57,8 +57,8 @@ class SparseF1Score(tf.keras.metrics.F1Score):
 # --------------------------------------------------------------------------- #
 # Config page
 # --------------------------------------------------------------------------- #
-st.set_page_config(page_title="Évaluation CNN - Radios pulmonaires", layout="wide")
-st.title("🫁 Évaluation d'un modèle CNN — Classification de radios pulmonaires")
+st.set_page_config(page_title=" Classification de Radios pulmonaires", layout="wide")
+st.title("🫁 Classification de radios pulmonaires")
 st.caption("COVID / NORMAL / LUNG_OPACITY / VIRAL_PNEUMONIA")
 
 
