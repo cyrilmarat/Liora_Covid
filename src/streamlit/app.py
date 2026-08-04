@@ -110,7 +110,20 @@ def evaluer(y_true, y_pred, class_names, titre):
 # --------------------------------------------------------------------------- #
 
 st.sidebar.title("Sommaire")
-pages=["1.Introduction", "2.Données & Visualisation", "3.Preprocessing", "4.Vers la modélisation", "5.Modèles & résultats", "6.ML: Modèle SVM", "7.DL: Modèle CNN 4 niveaux", "8.Biais de source", "9.Analyse du meilleur modèle", "10.Conclusion", "11.Limites & perspectives"]
+pages=[
+    "1.Introduction",
+    "2.Données & Visualisation",
+    "3.Preprocessing",
+    "4.Vers la modélisation",
+    "5.Modèles & résultats",
+    "6.ML: Modèle SVM",
+    "7.DL: Modèle CNN 4 niveaux",
+    "8.Biais de source",
+    "9.Impact du nombre de classes",
+    "10.Analyse du meilleur modèle",
+    "11.Conclusion",
+    "12.Limites & perspectives"
+]
 page=st.sidebar.radio("Aller vers", pages)
 
 
@@ -436,9 +449,81 @@ la source de l'image, pas seulement si les images elles-mêmes diffèrent statis
 
 
 # --------------------------------------------------------------------------- #
-# Analyse du meilleur modèle
+# Impact du nombre de classes
 # --------------------------------------------------------------------------- #
 if page == pages[8] :
+    st.write("### Impact du nombre de classes : 3 classes vs 4 classes")
+
+    st.markdown(
+        """
+Le test post-hoc de Dunn, corrigé par Bonferroni, montre que les classes
+**Lung Opacity** et **Viral Pneumonia** sont statistiquement équivalentes
+pour l'intensité moyenne des pixels (**p = 1**).
+
+Ce résultat nous a conduits à tester leur fusion dans une classe unique.
+        """
+    )
+
+    st.image(
+        "impact_classe_dunn.png",
+        caption=(
+            "Test de Dunn sur l'intensité moyenne : aucune différence significative "
+            "entre Lung Opacity et Viral Pneumonia."
+        ),
+        width="stretch"
+    )
+
+    st.markdown(
+        """
+Nous avons ensuite comparé deux configurations :
+
+- **4 classes** : COVID, Normal, Lung Opacity et Viral Pneumonia ;
+- **3 classes** : COVID, Normal et fusion des deux classes pathologiques.
+        """
+    )
+
+    tab_global, tab_covid = st.tabs(
+        ["F1-macro global", "F1 de la classe COVID"]
+    )
+
+    with tab_global:
+        st.image(
+            "impact_classe_f1global.png",
+            caption="Comparaison du F1-macro global en 3 et 4 classes.",
+            width="stretch"
+        )
+        st.markdown(
+            """
+**À retenir :** les écarts sont faibles, mais les modèles de Deep Learning
+sont globalement légèrement meilleurs en **4 classes**.
+            """
+        )
+
+    with tab_covid:
+        st.image(
+            "impact_classe_f1covid.png",
+            caption="Comparaison du F1-score COVID en 3 et 4 classes.",
+            width="stretch"
+        )
+        st.markdown(
+            """
+**À retenir :** la fusion n'améliore pas systématiquement la détection du COVID.
+Les performances restent proches selon les modèles.
+            """
+        )
+
+    st.success(
+        """
+        **Choix retenu : 4 classes**, pour conserver une information plus détaillée
+        sans perte de performance.
+        """
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Analyse du meilleur modèle
+# --------------------------------------------------------------------------- #
+if page == pages[9] :
     st.write("### Analyse du modèle retenu — CNN 4 couches (tuned)")
 
     st.markdown(
@@ -464,7 +549,7 @@ raisons prioritaires pour un outil de dépistage :
 # --------------------------------------------------------------------------- #
 # Conclusion
 # --------------------------------------------------------------------------- #
-if page == pages[9] :
+if page == pages[10] :
     st.write("### Conclusion")
 
     st.markdown(
@@ -493,7 +578,7 @@ Ce compromis précision/rappel devra être calibré selon le contexte clinique v
 # --------------------------------------------------------------------------- #
 # Limites & perspectives
 # --------------------------------------------------------------------------- #
-if page == pages[10] :
+if page == pages[11] :
     st.write("### Limites & perspectives")
 
     st.markdown(
