@@ -144,9 +144,9 @@ def evaluer(y_true, y_pred, class_names, titre):
 # Exécution
 # --------------------------------------------------------------------------- #
 st.sidebar.image("intro.png", width=400)
-st.sidebar.title("Sommaire")
+st.sidebar.title(":material/coronavirus: Sommaire")
 pages=[
-    "1.Introduction",
+    "1.Introduction ",
     "2.Données & Visualisation",
     "3.Preprocessing",
     "4.Vers la modélisation",
@@ -159,9 +159,19 @@ pages=[
     "11.Conclusion",
     "12.Limites & perspectives"
 ]
-page=st.sidebar.radio("Aller vers", pages)
 
 
+#page=st.sidebar.radio("Aller vers", pages)
+
+option_map = {p: f":material/coronavirus: {p}" for p in pages}
+
+page = st.sidebar.pills(
+    "",
+    options=option_map.keys(),
+    format_func=lambda option: option_map[option],
+    selection_mode="single",
+    default=pages[0]
+)
 # --------------------------------------------------------------------------- #
 # Introduction
 # --------------------------------------------------------------------------- #
