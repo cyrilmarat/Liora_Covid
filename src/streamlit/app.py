@@ -18,12 +18,12 @@ from pathlib import Path
 # Chemins
 # --------------------------------------------------------------------------- #
 model_CNN_path = "../../models/cnn256/cnn_256.keras"    
-val_dir ="../../../COVID-19_Radiography_Dataset_split/validation/"  
-test_dir = "../../../COVID-19_Radiography_Dataset_split/test/"
+val_dir ="../../COVID-19_Radiography_Dataset_split/validation/"  
+test_dir = "../../COVID-19_Radiography_Dataset_split/test/"
 model_SVM_path = "../../models/svm/svm_weighted.joblib"
 scaler_SVM_path = "../../models/svm/scaler_svm.joblib"
-csv_test="../../../features/test_features.csv"
-csv_validation="../../../features/validation_features.csv"
+csv_test="../../csv/st_features.csv"
+csv_validation="../../csv/lidation_features.csv"
 
 # --------------------------------------------------------------------------- #
 # Definitions globales
@@ -128,7 +128,7 @@ def evaluer(y_true, y_pred, class_names, titre):
 # --------------------------------------------------------------------------- #
 # Exécution
 # --------------------------------------------------------------------------- #
-st.sidebar.image("intro.png", use_column_width=True)
+st.sidebar.image("intro.png", width=400)
 st.sidebar.title("Sommaire")
 pages=[
     "1.Introduction",
