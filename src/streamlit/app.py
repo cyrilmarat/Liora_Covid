@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 import matplotlib.pyplot as plt
 import seaborn as sns
 import tensorflow as tf
@@ -10,6 +11,8 @@ from tensorflow.keras.preprocessing import image_dataset_from_directory
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn import metrics
 import joblib
+import base64
+from pathlib import Path
 
 # --------------------------------------------------------------------------- #
 # Chemins
@@ -51,6 +54,23 @@ st.title("🫁 Classification de radiographies pulmonaires")
 st.caption("COVID / NORMAL / LUNG_OPACITY / VIRAL_PNEUMONIA")
 
 
+
+
+# --------------------------------------------------------------------------- #
+# Utilitaire pour l'animation du pré-processing
+# --------------------------------------------------------------------------- #
+def image_to_data_uri(image_path: str) -> str:
+    """Convertit une image locale en Data URI pour l'afficher dans un composant HTML."""
+    path = Path(image_path)
+
+    if not path.exists():
+        raise FileNotFoundError(f"Image introuvable : {image_path}")
+
+    extension = path.suffix.lower().replace(".", "")
+    mime_type = "jpeg" if extension in {"jpg", "jpeg"} else extension
+
+    encoded = base64.b64encode(path.read_bytes()).decode("utf-8")
+    return f"data:image/{mime_type};base64,{encoded}"
 
 
 # --------------------------------------------------------------------------- #
@@ -250,6 +270,8 @@ if page == pages[2] :
     st.write("Pour répondre aux constats dressés lors de l'étape d'exploration, nous avons défini le pipeline de preprocessing ci-dessous.")
     
     st.image("pipeline_preprocessing.png", caption="Pipeline preprocessing")
+
+
     
     st.write("Cette étape comprend les processus de nettoyage, de traitement des images, de séparation et enfin d'augmantation sur le jeu d'entraînement uniquement.")
     
@@ -292,6 +314,191 @@ if page == pages[3] :
         """
     )
     st.image("../../reports/figures/exemple_pipeline.png", caption="Exemple de preprocessing sur une image COVID", width=650)
+
+
+    st.write("#### Transformation progressive d'une radiographie")
+
+    st.caption(
+        "L'animation illustre l'application du masque pulmonaire, puis "
+        "l'amélioration locale du contraste par CLAHE."
+    )
+
+    try:
+        image_brute = image_to_data_uri("preprocessing_1_brute.png")
+        image_masque = image_to_data_uri("preprocessing_2_masque.png")
+        image_clahe = image_to_data_uri("preprocessing_3_clahe.png")
+
+        # Composant HTML compact avec transition progressive entre les étapes.
+        animation_html = f"""
+        <style>
+            .preprocess-wrapper {{
+                max-width: 580px;
+                margin: 0 auto;
+                padding: 0 0 18px 0;
+                font-family: Arial, sans-serif;
+                text-align: center;
+                box-sizing: border-box;
+            }}
+
+            .preprocess-stage {{
+                position: relative;
+                width: 100%;
+                aspect-ratio: 1.75 / 1;
+                overflow: hidden;
+                border-radius: 12px;
+                background: #0e1117;
+            }}
+
+            .preprocess-stage img {{
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                opacity: 0;
+                transform: scale(1.015);
+                transition:
+                    opacity 1.8s ease-in-out,
+                    transform 1.8s ease-in-out;
+                will-change: opacity, transform;
+            }}
+
+            .preprocess-stage img.active {{
+                opacity: 1;
+                transform: scale(1);
+            }}
+
+            .preprocess-caption {{
+                min-height: 46px;
+                margin-top: 12px;
+                text-align: center;
+                font-size: 15px;
+                line-height: 1.45;
+                color: #8b949e;
+                opacity: 1;
+                transition: opacity 0.6s ease-in-out;
+            }}
+
+            .preprocess-caption.fade {{
+                opacity: 0;
+            }}
+
+            .preprocess-launch {{
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 210px;
+                margin-top: 14px;
+                margin-bottom: 8px;
+                border: none;
+                border-radius: 10px;
+                background: #ff4b4b;
+                color: white;
+                padding: 10px 18px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                line-height: 1.2;
+                white-space: nowrap;
+                box-sizing: border-box;
+            }}
+
+            .preprocess-launch:hover {{
+                filter: brightness(0.96);
+            }}
+
+            .preprocess-launch:disabled {{
+                cursor: default;
+                opacity: 0.75;
+            }}
+        </style>
+
+        <div class="preprocess-wrapper">
+            <div class="preprocess-stage">
+                <img src="{image_brute}" alt="Radiographie brute" class="active">
+                <img src="{image_masque}" alt="Radiographie après application du masque">
+                <img src="{image_clahe}" alt="Radiographie après CLAHE et masque">
+            </div>
+
+            <div class="preprocess-caption" id="preprocess-caption">
+                Image brute — radiographie avant traitement.
+            </div>
+
+            <button type="button" class="preprocess-launch" id="preprocess-launch">
+                ▶ Lancer l'animation
+            </button>
+        </div>
+
+        <script>
+            const images = Array.from(document.querySelectorAll(".preprocess-stage img"));
+            const caption = document.getElementById("preprocess-caption");
+            const launchButton = document.getElementById("preprocess-launch");
+
+            const captions = [
+                "Image brute — radiographie avant traitement.",
+                "Application du masque — seules les zones pulmonaires sont conservées.",
+                "CLAHE + masque — le contraste local est progressivement renforcé."
+            ];
+
+            let timers = [];
+
+            function clearTimers() {{
+                timers.forEach(timer => clearTimeout(timer));
+                timers = [];
+            }}
+
+            function updateCaption(index) {{
+                caption.classList.add("fade");
+
+                timers.push(setTimeout(() => {{
+                    caption.textContent = captions[index];
+                    caption.classList.remove("fade");
+                }}, 320));
+            }}
+
+            function showStep(index) {{
+                images.forEach((image, i) => {{
+                    image.classList.toggle("active", i === index);
+                }});
+                updateCaption(index);
+            }}
+
+            function launchAnimation() {{
+                clearTimers();
+                launchButton.disabled = true;
+                launchButton.textContent = "Animation en cours…";
+
+                images.forEach((image, i) => {{
+                    image.classList.toggle("active", i === 0);
+                }});
+                caption.textContent = captions[0];
+                caption.classList.remove("fade");
+
+                timers.push(setTimeout(() => {{
+                    showStep(1);
+                }}, 2400));
+
+                timers.push(setTimeout(() => {{
+                    showStep(2);
+                }}, 5200));
+
+                timers.push(setTimeout(() => {{
+                    launchButton.disabled = false;
+                    launchButton.textContent = "▶ Relancer l'animation";
+                }}, 8000));
+            }}
+
+            launchButton.addEventListener("click", launchAnimation);
+        </script>
+        """
+
+        components.html(animation_html, height=485, scrolling=False)
+
+    except FileNotFoundError as e:
+        st.warning(
+            f"{e}. Les trois images de l'animation doivent être placées "
+            "dans le même dossier que app.py."
+        )
 
     st.write("### Vers la modélisation")
     st.markdown(
