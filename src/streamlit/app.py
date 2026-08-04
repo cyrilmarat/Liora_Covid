@@ -22,8 +22,8 @@ val_dir ="../../COVID-19_Radiography_Dataset_split/validation/"
 test_dir = "../../COVID-19_Radiography_Dataset_split/test/"
 model_SVM_path = "../../models/svm/svm_weighted.joblib"
 scaler_SVM_path = "../../models/svm/scaler_svm.joblib"
-csv_test="../../csv/st_features.csv"
-csv_validation="../../csv/lidation_features.csv"
+csv_test="../../csv/test_features.csv"
+csv_validation="../../csv/validation_features.csv"
 
 # --------------------------------------------------------------------------- #
 # Definitions globales
