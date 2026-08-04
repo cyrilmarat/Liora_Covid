@@ -609,7 +609,7 @@ F1-macro de 0,16 à 0,25 selon la stratégie — tout modèle utile doit largeme
 
     st.write("#### Tableau récapitulatif final")
     recap = pd.read_csv("../../models/model_comparison_recap_final.csv")
-    st.dataframe(recap, hide_index=True, use_container_width=True, height=420)
+    st.dataframe(recap, hide_index=True, width="stretch", height=420)
 
 
 # --------------------------------------------------------------------------- #
