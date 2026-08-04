@@ -143,7 +143,7 @@ def evaluer(y_true, y_pred, class_names, titre):
 # --------------------------------------------------------------------------- #
 # Exécution
 # --------------------------------------------------------------------------- #
-st.sidebar.image("intro.png", use_column_width=True)
+st.sidebar.image("intro.png", width="stretch")
 st.sidebar.title("Sommaire")
 pages=[
     "1.Introduction",
@@ -599,7 +599,7 @@ F1-macro de 0,16 à 0,25 selon la stratégie — tout modèle utile doit largeme
 
     st.write("#### Tableau récapitulatif final")
     recap = pd.read_csv("../../models/model_comparison_recap_final.csv")
-    st.dataframe(recap, hide_index=True, use_container_width=True, height=420)
+    st.dataframe(recap, hide_index=True, width="stretch", height=420)
 
 
 # --------------------------------------------------------------------------- #
