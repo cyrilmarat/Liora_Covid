@@ -261,6 +261,7 @@ if page == pages[1] :
 
     st.write("### Outliers")
 
+    st.badge("Analyse des outliers sur le contraste => pas de problème au niveau de l'algorithme ", icon=":material/check:", color="green")
 
     st.write("Pour chaque classe, les images dont la distance quadratique moyenne (MSE) par rapport à l'image moyenne de leur classe dépasse un seuil ont été identifiées comme atypiques :")
     st.write("- Normal : 11 outliers (MSE > 2500)")
@@ -269,6 +270,20 @@ if page == pages[1] :
     st.write("- Viral Pneumonia : 32 outliers (MSE > 3 000)")
     st.write("Les distances sont calculées en travaillant sur une image redimensionnée à 50x50 pixels")
 
+    st.badge("=> Après visualisation des outliers sur les écarts de dimension => pas de problème au niveau de l'algorithme ", icon=":material/check:", color="green")
+    
+    st.write("Pour chaque classe, les images dont la distance quadratique moyenne (MSE) par rapport à l'image moyenne de leur classe dépasse un seuil ont été identifiées comme atypiques :")
+    st.write("- Normal : 11 outliers (MSE > 2500)")
+    st.write("- COVID : 34 outliers (MSE > 4 000)")
+    st.write("- Lung Opacity : 20 outliers (MSE > 4 000)")
+    st.write("- Viral Pneumonia : 32 outliers (MSE > 3 000)")
+    st.write("Les distances sont calculées en travaillant sur une image redimensionnée à 50x50 pixels")
+    
+    st.badge("=>Par le même mécanisme, les images dont la variance du laplacien n atteignant pas un seuil ont été, cette fois, considérés comme floues et supprimées. ", icon=":material/check:", color="green")
+             
+    st.write("### Doublons")
+    st.write("Pour chaque classe et pour chaque image, une distance quadratique moyenne moyenne (MSE) a été calculée entre chaque image :")
+    st.badge("=>Par le même mécanisme,  le couple d'image dont la distance sera à inférieure à 10 seront considéra comme couple identique. La seconde image du couple sera supprimée ", icon=":material/check:", color="green")  
 # --------------------------------------------------------------------------- #
 # Feature Extraction
 # --------------------------------------------------------------------------- #
@@ -878,6 +893,8 @@ if page == pages[11] :
   Forest et XGBoost.
 - **Transfer learning** : DenseNet, à performance égale au meilleur CNN maison, mériterait
   une analyse plus poussée (rappel COVID, surapprentissage) avant d'envisager de le retenir.
+- **Transfer learning** :  sur les modèles, la profondeur du dégel n'a pas fait l'objet d'une grande optimisation. Cela était couteux.
+- **CNN tuned** :  Le temps de recherche a été limité en terme d'epoch et de temps (1 nuit)
 - **Validation externe** : le modèle retenu n'a pas été testé sur des données d'une autre
   origine que ce dataset.
         """
