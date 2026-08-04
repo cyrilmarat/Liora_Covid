@@ -115,12 +115,27 @@ def evaluer(y_true, y_pred, class_names, titre):
     st.dataframe(pd.DataFrame(report_dict).transpose().round(3))
 
     cm = confusion_matrix(y_true, y_pred, normalize="true")
-    fig, ax = plt.subplots(figsize=(5, 5))
-    cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
-    cm_display.plot(ax=ax, colorbar=False)
-    plt.xticks(rotation=45, ha="right")
+
+    # Format compact pour éviter que la matrice n'occupe toute la largeur.
+    fig, ax = plt.subplots(figsize=(4.2, 4.2))
+    cm_display = metrics.ConfusionMatrixDisplay(
+        confusion_matrix=cm,
+        display_labels=class_names
+    )
+    cm_display.plot(ax=ax, colorbar=False, values_format=".2f")
+
+    ax.tick_params(axis="both", labelsize=8)
+    plt.setp(ax.get_xticklabels(), rotation=35, ha="right")
+    ax.set_xlabel("Classe prédite", fontsize=9)
+    ax.set_ylabel("Classe réelle", fontsize=9)
     plt.tight_layout()
-    st.pyplot(fig)
+
+    # Affichage centré dans une colonne plus étroite.
+    col_gauche, col_matrice, col_droite = st.columns([1, 1.35, 1])
+    with col_matrice:
+        st.pyplot(fig, width="stretch")
+
+    plt.close(fig)
 
     return acc
 
@@ -187,12 +202,12 @@ if page == pages[1] :
 
     st.write(f"Le jeu de données dont nous disposons contient 20 835 images réparties en 4 classes : Covid, Lung Opacity, Normal, Viral Pneumonia")
 
-    st.image("distribution.png", caption="Répartition des classes")
+    st.image("distribution.png", caption="Répartition des classes", width=650)
 
     st.write("Les images COVID-19 proviennent de sources hétérogènes (PadChest, GitHub, SIRM, et autres dépôts publics), tandis que les classes Normal, Lung Opacity et Viral Pneumonia sont issues de bases de données uniques (RSNA, Kaggle).")
 
     st.write("#### Exemples d'images du dataset et les masques associés")
-    st.image("../../reports/figures/exemples_images_masques.png")
+    st.image("../../reports/figures/exemples_images_masques.png", width=750)
 
     st.write("### Distribution des pixels par classe")
     col1, col2 , col3, col4= st.columns(4)
@@ -216,13 +231,13 @@ if page == pages[1] :
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.image("ACP_1.png")
+        st.image("ACP_1.png", width=420)
 
     with col2:
-        st.image("ACP_3.png")
+        st.image("ACP_3.png", width=420)
 
     with col3:
-        st.image("ACP_4.png")
+        st.image("ACP_4.png", width=420)
 
     st.write("Une analyse en composantes principales (ACP) sur le jeu de données est réalisée afin de visualiser la structure des données, repérer d'éventuels outliers et évaluer la séparation des différentes classes.")
     st.write("La forte superposition des classes suggère que les différences observées sont dues à des motifs radiologiques complexes et locaux. Cela justifie le recours a des modèles d'apprentissage capables d'extraire les caractéristiques discriminantes spécifique à chaque classe.")
@@ -256,11 +271,28 @@ if page == pages[2] :
             "Variance du Laplacien, indicateur de netteté de l'image"]
             })
     
-    strategies_analyse=pd.DataFrame({"Stratégie":["Data augmentation", "Class weigths"],
-                                        "Description":["Via ImageDataGenerator de Keras, appliquée uniquement sur le jeu d'entraînement. Elle permet d'augmenter artificiellement le nombre d'images des classes minoritaires par transformations géométriques (rotation, flip horizontal, zoom)",
-                                        "Pour les modèles sensibles au déséquilibre (CNN, Random Forest), un poids inversement proportionnel à la fréquence de chaque classe sera appliqué dans la fonction de perte, forçant le modèle à accorder plus d'importance aux classes rares comme Viral Pneumonia."]
-                                        })
-    
+    strategies_analyse = pd.DataFrame(
+        {
+            "Stratégie": [
+                "Rééchantillonnage des features",
+                "Class weights"
+            ],
+            "Description": [
+                (
+                    "Uniquement pour les modèles de Machine Learning entraînés sur les "
+                    "features CSV. Un RandomOverSampler est appliqué au jeu "
+                    "d'entraînement pour équilibrer les classes minoritaires. "
+                    "Les jeux de validation et de test restent inchangés."
+                ),
+                (
+                    "Un poids inversement proportionnel à la fréquence de chaque classe "
+                    "est appliqué pendant l'entraînement afin d'accorder davantage "
+                    "d'importance aux classes rares."
+                )
+            ]
+        }
+    )
+
     deduplication=pd.DataFrame({"Classe":["Covid", "Normal", "Lung Opacity", "Viral Pneumonia"],
                                     "Doublons":[1, 223, 0, 7],
                                     "outliers":[23, 55, 24, 0]})
@@ -269,13 +301,18 @@ if page == pages[2] :
     
     st.write("Pour répondre aux constats dressés lors de l'étape d'exploration, nous avons défini le pipeline de preprocessing ci-dessous.")
     
-    st.image("pipeline_preprocessing.png", caption="Pipeline preprocessing")
+    st.image("pipeline_preprocessing.png", caption="Pipeline preprocessing", width=750)
 
 
     
     st.write("Cette étape comprend les processus de nettoyage, de traitement des images, de séparation et enfin d'augmantation sur le jeu d'entraînement uniquement.")
     
-    st.write("Cette stratégie a été adoptée pour fiabiliser le jeu de données (dé-duplication), supprimer le fond (masques), harmoniser les caractéristiques des images (normalisation) et augmenter la variabilité des données (augmentation)")
+    st.write(
+        "Cette stratégie a été adoptée pour fiabiliser le jeu de données "
+        "(dé-duplication), supprimer le fond grâce aux masques, harmoniser les "
+        "caractéristiques des images et augmenter la variabilité du jeu "
+        "d'entraînement destiné aux modèles de Deep Learning."
+    )
     
     st.write("L'étape d'exploration a permis de repérer 231 doublons et 102 outliers")
     st.table(deduplication)
@@ -287,10 +324,31 @@ if page == pages[2] :
     
     st.write("Le jeu de données ainsi constitué compte 20 835 images réparties sur les 4 classes.")
     
-    st.write("### Gestion des déséquilibres")
-    
-    st.write("Deux stratégies ont été définies pour prendre en compte le déséquilibre des classes constaté lors de l'étape d'analyse :")
+    st.write("### Gestion du déséquilibre des classes")
+
+    st.write(
+        "Deux stratégies distinctes ont été utilisées selon le type de modèle :"
+    )
+
     st.table(strategies_analyse)
+
+    st.caption(
+        "Le rééchantillonnage concerne uniquement le fichier CSV d'entraînement "
+        "utilisé par les modèles classiques de Machine Learning."
+    )
+
+    st.write("### Data augmentation pour les modèles de Deep Learning")
+
+    st.markdown(
+        """
+La **data augmentation** augmente la variabilité des images grâce à plusieurs
+transformations légères : rotations, translations, zooms et flips horizontaux.
+
+Elle est appliquée **uniquement au jeu d'entraînement** afin d'exposer les modèles
+de Deep Learning à davantage de variations et d'améliorer leur capacité de
+généralisation. Les jeux de validation et de test restent inchangés.
+        """
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -537,7 +595,7 @@ Un **DummyClassifier** (aucun apprentissage réel) sert de plancher de référen
 F1-macro de 0,16 à 0,25 selon la stratégie — tout modèle utile doit largement le dépasser.
         """
     )
-    st.image("../../reports/figures/rpt_f1_global.png", caption="F1-macro — comparaison Machine Learning vs Deep Learning (test)")
+    st.image("../../reports/figures/rpt_f1_global.png", caption="F1-macro — comparaison Machine Learning vs Deep Learning (test)", width=750)
 
     st.write("#### Tableau récapitulatif final")
     recap = pd.read_csv("../../models/model_comparison_recap_final.csv")
@@ -671,14 +729,17 @@ Ce résultat nous a conduits à tester leur fusion dans une classe unique.
         """
     )
 
-    st.image(
-        "impact_classe_dunn.png",
-        caption=(
-            "Test de Dunn sur l'intensité moyenne : aucune différence significative "
-            "entre Lung Opacity et Viral Pneumonia."
-        ),
-        width="stretch"
-    )
+    # Tableau volontairement plus compact que les graphiques de résultats.
+    col_gauche, col_dunn, col_droite = st.columns([1, 2.2, 1])
+    with col_dunn:
+        st.image(
+            "impact_classe_dunn.png",
+            caption=(
+                "Test de Dunn sur l'intensité moyenne : aucune différence "
+                "significative entre Lung Opacity et Viral Pneumonia."
+            ),
+            width="stretch"
+        )
 
     st.markdown(
         """
@@ -697,7 +758,7 @@ Nous avons ensuite comparé deux configurations :
         st.image(
             "impact_classe_f1global.png",
             caption="Comparaison du F1-macro global en 3 et 4 classes.",
-            width="stretch"
+            width=750
         )
         st.markdown(
             """
@@ -710,7 +771,7 @@ sont globalement légèrement meilleurs en **4 classes**.
         st.image(
             "impact_classe_f1covid.png",
             caption="Comparaison du F1-score COVID en 3 et 4 classes.",
-            width="stretch"
+            width=750
         )
         st.markdown(
             """
@@ -745,9 +806,9 @@ raisons prioritaires pour un outil de dépistage :
     )
     col1, col2 = st.columns(2)
     with col1:
-        st.image("../../reports/figures/cm_deep_learning_normalized.png", caption="Matrices de confusion normalisées — Deep Learning")
+        st.image("../../reports/figures/cm_deep_learning_normalized.png", caption="Matrices de confusion normalisées — Deep Learning", width=650)
     with col2:
-        st.image("../../reports/figures/rpt_pr_curves_dl.png", caption="Courbes Précision-Rappel — Deep Learning")
+        st.image("../../reports/figures/rpt_pr_curves_dl.png", caption="Courbes Précision-Rappel — Deep Learning", width=650)
 
     st.write("#### Grad-CAM — où le modèle « regarde »")
     st.image("../../reports/figures/gradcam_planche.png", caption="Cartes d'activation Grad-CAM par modèle", width=750)
