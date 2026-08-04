@@ -15,9 +15,14 @@ import base64
 from pathlib import Path
 
 # --------------------------------------------------------------------------- #
+# Chemins de base (indépendants du répertoire de travail courant)
+# --------------------------------------------------------------------------- #
+BASE_DIR = Path(__file__).resolve().parent          # .../src/streamlit
+PROJECT_ROOT = BASE_DIR.parent.parent                # racine du dépôt
+
+# --------------------------------------------------------------------------- #
 # Chemins
 # --------------------------------------------------------------------------- #
-#
 model_CNN_path = str(PROJECT_ROOT / "models" / "cnn256" / "cnn_256.keras")
 val_dir = str(PROJECT_ROOT / "COVID-19_Radiography_Dataset_split" / "validation")
 test_dir = str(PROJECT_ROOT / "COVID-19_Radiography_Dataset_split" / "test")
@@ -25,8 +30,6 @@ model_SVM_path = str(PROJECT_ROOT / "models" / "svm" / "svm_weighted.joblib")
 scaler_SVM_path = str(PROJECT_ROOT / "models" / "svm" / "scaler_svm.joblib")
 csv_test = str(PROJECT_ROOT / "csv" / "test_features.csv")
 csv_validation = str(PROJECT_ROOT / "csv" / "validation_features.csv")
- 
-
 
 # --------------------------------------------------------------------------- #
 # Definitions globales
@@ -146,7 +149,7 @@ def evaluer(y_true, y_pred, class_names, titre):
 # --------------------------------------------------------------------------- #
 # Exécution
 # --------------------------------------------------------------------------- #
-st.sidebar.image("intro.png", width=400)
+st.sidebar.image(str(BASE_DIR / "intro.png"), width=400)
 st.sidebar.title(":material/coronavirus: Sommaire")
 pages=[
     "1.Introduction ",
@@ -215,26 +218,26 @@ if page == pages[1] :
 
     st.write(f"Le jeu de données dont nous disposons contient 20 835 images réparties en 4 classes : Covid, Lung Opacity, Normal, Viral Pneumonia")
 
-    st.image("distribution.png", caption="Répartition des classes", width=650)
+    st.image(str(BASE_DIR / "distribution.png"), caption="Répartition des classes", width=650)
 
     st.write("Les images COVID-19 proviennent de sources hétérogènes (PadChest, GitHub, SIRM, et autres dépôts publics), tandis que les classes Normal, Lung Opacity et Viral Pneumonia sont issues de bases de données uniques (RSNA, Kaggle).")
 
     st.write("#### Exemples d'images du dataset et les masques associés")
-    st.image("../../reports/figures/exemples_images_masques.png", width=750)
+    st.image(str(PROJECT_ROOT / "reports" / "figures" / "exemples_images_masques.png"), width=750)
 
     st.write("### Distribution des pixels par classe")
     col1, col2 , col3, col4= st.columns(4)
     with col1:
-        st.image("hist_intensite_1.png", caption="Sans masque")
+        st.image(str(BASE_DIR / "hist_intensite_1.png"), caption="Sans masque")
 
     with col2:
-        st.image("hist_intensite_2_masques.png", caption="Avec masque")
+        st.image(str(BASE_DIR / "hist_intensite_2_masques.png"), caption="Avec masque")
 
     with col3:
-        st.image("hist_intensite_3.png", caption="Sans masque")
+        st.image(str(BASE_DIR / "hist_intensite_3.png"), caption="Sans masque")
 
     with col4:
-        st.image("hist_intensite_4_masques.png", caption="Avec masque")
+        st.image(str(BASE_DIR / "hist_intensite_4_masques.png"), caption="Avec masque")
 
     st.write("L'analyse de la luminosité des images montre des différences entre les différentes classes. La moyenne des pixels traduit le niveau global de luminosité d'une radiographie tandis que l'écart-type renseigne sur l'hétérogénité des nivveaux de gris. La classe Covid présente les intensités les plus élevées et ses valeurs sont plus dispersées tandis que les autres classes présentent des valeurs assez proches. L'apllication des masques modifient ces indicateurs en diminuant l'intensité lumineuse et en resserrant la distribution. Les différences entre les classes sont moins marquées.")
 
@@ -244,13 +247,13 @@ if page == pages[1] :
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.image("ACP_1.png", width=420)
+        st.image(str(BASE_DIR / "ACP_1.png"), width=420)
 
     with col2:
-        st.image("ACP_3.png", width=420)
+        st.image(str(BASE_DIR / "ACP_3.png"), width=420)
 
     with col3:
-        st.image("ACP_4.png", width=420)
+        st.image(str(BASE_DIR / "ACP_4.png"), width=420)
 
     st.write("Une analyse en composantes principales (ACP) sur le jeu de données est réalisée afin de visualiser la structure des données, repérer d'éventuels outliers et évaluer la séparation des différentes classes.")
     st.write("La forte superposition des classes suggère que les différences observées sont dues à des motifs radiologiques complexes et locaux. Cela justifie le recours a des modèles d'apprentissage capables d'extraire les caractéristiques discriminantes spécifique à chaque classe.")
@@ -314,7 +317,7 @@ if page == pages[2] :
     
     st.write("Pour répondre aux constats dressés lors de l'étape d'exploration, nous avons défini le pipeline de preprocessing ci-dessous.")
     
-    st.image("pipeline_preprocessing.png", caption="Pipeline preprocessing", width=750)
+    st.image(str(BASE_DIR / "pipeline_preprocessing.png"), caption="Pipeline preprocessing", width=750)
 
 
     
@@ -384,7 +387,7 @@ if page == pages[3] :
   transformations légères pour ne pas altérer les caractéristiques médicales des lésions.
         """
     )
-    st.image("../../reports/figures/exemple_pipeline.png", caption="Exemple de preprocessing sur une image COVID", width=650)
+    st.image(str(PROJECT_ROOT / "reports" / "figures" / "exemple_pipeline.png"), caption="Exemple de preprocessing sur une image COVID", width=650)
 
 
     st.write("#### Transformation progressive d'une radiographie")
@@ -395,9 +398,9 @@ if page == pages[3] :
     )
 
     try:
-        image_brute = image_to_data_uri("preprocessing_1_brute.png")
-        image_masque = image_to_data_uri("preprocessing_2_masque.png")
-        image_clahe = image_to_data_uri("preprocessing_3_clahe.png")
+        image_brute = image_to_data_uri(str(BASE_DIR / "preprocessing_1_brute.png"))
+        image_masque = image_to_data_uri(str(BASE_DIR / "preprocessing_2_masque.png"))
+        image_clahe = image_to_data_uri(str(BASE_DIR / "preprocessing_3_clahe.png"))
 
         # Composant HTML compact avec transition progressive entre les étapes.
         animation_html = f"""
@@ -608,10 +611,10 @@ Un **DummyClassifier** (aucun apprentissage réel) sert de plancher de référen
 F1-macro de 0,16 à 0,25 selon la stratégie — tout modèle utile doit largement le dépasser.
         """
     )
-    st.image("../../reports/figures/rpt_f1_global.png", caption="F1-macro — comparaison Machine Learning vs Deep Learning (test)", width=750)
+    st.image(str(PROJECT_ROOT / "reports" / "figures" / "rpt_f1_global.png"), caption="F1-macro — comparaison Machine Learning vs Deep Learning (test)", width=750)
 
     st.write("#### Tableau récapitulatif final")
-    recap = pd.read_csv("../../models/model_comparison_recap_final.csv")
+    recap = pd.read_csv(str(PROJECT_ROOT / "models" / "model_comparison_recap_final.csv"))
     st.dataframe(recap, hide_index=True, width="stretch", height=420)
 
 
@@ -719,7 +722,7 @@ L'EDA seule ne suffit pas : on a vérifié si les **modèles** performent diffé
 la source de l'image, pas seulement si les images elles-mêmes diffèrent statistiquement.
         """
     )
-    st.image("../../reports/figures/source_bias_covid_recall.png", width=750)
+    st.image(str(PROJECT_ROOT / "reports" / "figures" / "source_bias_covid_recall.png"), width=750)
     st.caption(
         "Rappel COVID très variable selon la source pour les modèles Machine Learning "
         "(à nuancer : Eurorad n=30 et SIRM n=14 sont de petits effectifs)."
@@ -746,7 +749,7 @@ Ce résultat nous a conduits à tester leur fusion dans une classe unique.
     col_gauche, col_dunn, col_droite = st.columns([1, 2.2, 1])
     with col_dunn:
         st.image(
-            "impact_classe_dunn.png",
+            str(BASE_DIR / "impact_classe_dunn.png"),
             caption=(
                 "Test de Dunn sur l'intensité moyenne : aucune différence "
                 "significative entre Lung Opacity et Viral Pneumonia."
@@ -769,7 +772,7 @@ Nous avons ensuite comparé deux configurations :
 
     with tab_global:
         st.image(
-            "impact_classe_f1global.png",
+            str(BASE_DIR / "impact_classe_f1global.png"),
             caption="Comparaison du F1-macro global en 3 et 4 classes.",
             width=750
         )
@@ -782,7 +785,7 @@ sont globalement légèrement meilleurs en **4 classes**.
 
     with tab_covid:
         st.image(
-            "impact_classe_f1covid.png",
+            str(BASE_DIR / "impact_classe_f1covid.png"),
             caption="Comparaison du F1-score COVID en 3 et 4 classes.",
             width=750
         )
@@ -819,12 +822,12 @@ raisons prioritaires pour un outil de dépistage :
     )
     col1, col2 = st.columns(2)
     with col1:
-        st.image("../../reports/figures/cm_deep_learning_normalized.png", caption="Matrices de confusion normalisées — Deep Learning", width=650)
+        st.image(str(PROJECT_ROOT / "reports" / "figures" / "cm_deep_learning_normalized.png"), caption="Matrices de confusion normalisées — Deep Learning", width=650)
     with col2:
-        st.image("../../reports/figures/rpt_pr_curves_dl.png", caption="Courbes Précision-Rappel — Deep Learning", width=650)
+        st.image(str(PROJECT_ROOT / "reports" / "figures" / "rpt_pr_curves_dl.png"), caption="Courbes Précision-Rappel — Deep Learning", width=650)
 
     st.write("#### Grad-CAM — où le modèle « regarde »")
-    st.image("../../reports/figures/gradcam_planche.png", caption="Cartes d'activation Grad-CAM par modèle", width=750)
+    st.image(str(PROJECT_ROOT / "reports" / "figures" / "gradcam_planche.png"), caption="Cartes d'activation Grad-CAM par modèle", width=750)
 
 
 # --------------------------------------------------------------------------- #
