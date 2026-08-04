@@ -283,7 +283,8 @@ if page == pages[1] :
              
     st.write("### Doublons")
     st.write("Pour chaque classe et pour chaque image, une distance quadratique moyenne moyenne (MSE) a été calculée entre chaque image :")
-    st.badge("=>Par le même mécanisme,  le couple d'image dont la distance sera à inférieure à 10 seront considéra comme couple identique. La seconde image du couple sera supprimée ", icon=":material/check:", color="green")  
+    st.badge("=>Par le même mécanisme,  le couple d'image dont la distance sera à inférieure à 10 seront considérer comme couple identique. La seconde image du couple sera supprimée ", icon=":material/check:", color="green")  
+
 # --------------------------------------------------------------------------- #
 # Feature Extraction
 # --------------------------------------------------------------------------- #
@@ -897,6 +898,52 @@ if page == pages[11] :
 - **CNN tuned** :  Le temps de recherche a été limité en terme d'epoch et de temps (1 nuit)
 - **Validation externe** : le modèle retenu n'a pas été testé sur des données d'une autre
   origine que ce dataset.
+  **Validation externe** : le modèle retenu n'a pas été testé sur des données d'une autre
+  origine que ce dataset.
         """
     )
 
+    st.write("### Expertise sur les détections gradcam")
+    st.caption("Analyse de détections correctes")
+    
+    st.image(str(PROJECT_ROOT / "src" / "streamlit" / "gradcamCovidBonneDetection.png"))
+    st.markdown("""
+            **COVID**: image de gauche et centrale : activation concentrée en amas irréguliers -zone médio-basale-, plutôt multifocale/ par touches, cohérente avec des opacités en verre dépoli typiques du COVID. Le modèle trouve certains éléments intéressants sur le bas des poumons par contre il se trompe complètement sur la partie haute des poumons où il confond le flou lié à l’infection avec le flou lié à la superposition de la clavicule / omoplate / côte épaisse. 
+    La troisième image. L’activation se fait essentiellement sur la partie haute des poumons et c’est une erreur. La bonne détection s’est faite sur de mauvais critères"""
+    )
+    
+    st.image(str(PROJECT_ROOT / "src" / "streamlit" / "gradcamLungOpacityBonneDetection.png"))
+    st.markdown("""
+                **Lung_Opacity**: zones plus centrales et linéaires. Le modèle trouve certains éléments intéressants comme des opacités mal-définies par contre il se trompe complètement sur la partie haute des poumons où il confond le flou lié à l’infection avec le flou lié à la superposition de la clavicule / omoplate / côte épaisse. On retrouve des activations sur les contours qui correspondent à des artefacts de découpe des poumons. 
+
+        """
+    )
+    
+    st.image(str(PROJECT_ROOT / "src" / "streamlit" / "gradcamViralPneumoniaBonneDetection.png"))
+    st.markdown("""
+                **Viral_Pneumonia**:  très hétérogène d'un échantillon à l'autre. On retrouve des activations sur les contours qui correspondent à des artefacts de découpe des poumons et sur les côtes qui correspondent à des superpositions. Par contre les détections d’opacités (blanc) au sein des parties claires ( i-e noires ) sont correctes, soit sur le bas et sur le centre de chaque poumon. Elles doivent être mal limitées et bilatérales mais pas forcément symétriques. 
+            """
+    )
+    
+    st.image(str(PROJECT_ROOT / "src" / "streamlit" / "gradcamNormalBonneDetection.png"))
+    st.markdown("""
+                **Normal**:  Les zones se situent aux apex ou aux bases et sur les côtes, ce qui est troublant. Les zones qui différencient devrait être les parties claires (i-e noires à la radio) 
+        """)
+    
+    st.caption("Analyse de détections incorrectes")
+    st.image(str(PROJECT_ROOT / "src" / "streamlit" / "gradcamauvaisedetection.png"))
+    st.markdown("""
+                **1ère colonne** : La détection du covid d’effectue sur la partie flou de la cage thoracique.. L’algorithme n’a pas capturé l’information que cette zone pouvait être floue également suite à une mauvaise mise au point ou un mouvement.
+
+                **2nde colonne** : La détection du covid d’effectue sur des éléments non caractéristiques. Les opacités mal définies font plus penser à une opacité pulmonaire. cela fait plus penser à une infection car le volume est trop grand
+        """)
+    
+    st.image(str(PROJECT_ROOT / "src" / "streamlit" / "radio1.png"))
+    
+    st.markdown("""
+                    **3ème colonne** : La détection du covid d’effectue sur la partie flou de la cage thoracique. Les parties claires sont normales. Il n’y a pas d’anomalies.
+    
+                    **4ème colonne** : Les opacités mal définies n’ont pas été vues par l’algorithme. Il s’est focalisé sur de mauvaises parties. Ici, un spécialiste détecterait une opacité en base droite très légères, difficilement décelable car le critère serait l’aspect. 
+            """)
+    
+    st.image(str(PROJECT_ROOT / "src" / "streamlit" / "radio2.png"))
