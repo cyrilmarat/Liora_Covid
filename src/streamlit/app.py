@@ -49,9 +49,9 @@ class SparseF1Score(tf.keras.metrics.F1Score):
 # --------------------------------------------------------------------------- #
 # Config page
 # --------------------------------------------------------------------------- #
-st.set_page_config(page_title=" Classification de Radios pulmonaires", layout="wide")
-st.title("🫁 Classification de radiographies pulmonaires")
-st.caption("COVID / NORMAL / LUNG_OPACITY / VIRAL_PNEUMONIA")
+st.set_page_config(page_title=" Analyse des radiographies pulmonaires", layout="wide")
+st.title("🫁 Analyse des radiographies pulmonaires 🫁 ")
+st.caption("Classification COVID / NORMAL / LUNG_OPACITY / VIRAL_PNEUMONIA")
 
 
 
@@ -143,7 +143,7 @@ def evaluer(y_true, y_pred, class_names, titre):
 # --------------------------------------------------------------------------- #
 # Exécution
 # --------------------------------------------------------------------------- #
-
+st.sidebar.image("intro.png", use_column_width=True)
 st.sidebar.title("Sommaire")
 pages=[
     "1.Introduction",
