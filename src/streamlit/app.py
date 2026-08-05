@@ -12,6 +12,7 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 from sklearn import metrics
 import joblib
 import base64
+import sys
 from pathlib import Path
 
 # --------------------------------------------------------------------------- #
@@ -19,6 +20,11 @@ from pathlib import Path
 # --------------------------------------------------------------------------- #
 BASE_DIR = Path(__file__).resolve().parent          # .../src/streamlit
 PROJECT_ROOT = BASE_DIR.parent.parent                # racine du dépôt
+
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
+from frozen_results_data import CLASS_NAMES as FROZEN_CLASS_NAMES, LOGREG_RESULTS, XGBOOST_RESULTS
 
 # --------------------------------------------------------------------------- #
 # Chemins
@@ -146,6 +152,20 @@ def evaluer(y_true, y_pred, class_names, titre):
     return acc
 
 
+def evaluer_depuis_matrice(matrice_confusion, class_names, titre):
+    """Reconstitue y_true/y_pred à partir d'une matrice de confusion figée puis
+    réutilise `evaluer` pour un rendu identique aux pages en inférence live
+    (SVM, CNN), sans dépendre du modèle ni de la version des librairies."""
+    y_true, y_pred = [], []
+    for i, vrai_label in enumerate(class_names):
+        for j, label_predit in enumerate(class_names):
+            effectif = matrice_confusion[i][j]
+            y_true.extend([vrai_label] * effectif)
+            y_pred.extend([label_predit] * effectif)
+
+    return evaluer(pd.Series(y_true), pd.Series(y_pred), class_names, titre)
+
+
 # --------------------------------------------------------------------------- #
 # Exécution
 # --------------------------------------------------------------------------- #
@@ -157,14 +177,38 @@ pages=[
     "3.Preprocessing",
     "4.Vers la modélisation",
     "5.Modèles & résultats",
-    "6.ML: Modèle SVM",
-    "7.DL: Modèle CNN 4 niveaux",
+    "6.ML : Modèles",
+    "7.DL : Modèles",
     "8.Biais de source",
     "9.Impact du nombre de classes",
     "10.Analyse du meilleur modèle",
     "11.Conclusion",
     "12.Limites & perspectives"
 ]
+
+# --------------------------------------------------------------------------- #
+# Table de correspondance : ligne du tableau récapitulatif (diapo 5) -> diapo
+# et modèle/variante à présélectionner. Seuls les modèles ayant une diapo
+# dédiée sont mappés ; les autres lignes du tableau restent non cliquables.
+# --------------------------------------------------------------------------- #
+RECAP_ROW_TO_CIBLE = {
+    "SVM (GridSearch best)": {"page": pages[5], "modele": "SVM"},
+    "Regression logistique (balanced, OneVsRest)": {
+        "page": pages[5], "modele": "Régression Logistique",
+        "variante": "Balanced (avec pondération)",
+    },
+    "Regression logistique (sans ponderation, OneVsRest)": {
+        "page": pages[5], "modele": "Régression Logistique",
+        "variante": "Sans pondération",
+    },
+    "XGBoost (baseline, sans ponderation)": {
+        "page": pages[5], "modele": "XGBoost", "variante": "Baseline",
+    },
+    "XGBoost (GridSearch best, balanced)": {
+        "page": pages[5], "modele": "XGBoost", "variante": "GridSearch balanced",
+    },
+    "CNN 4 couches (tuned)": {"page": pages[6], "modele": "CNN 4 niveaux"},
+}
 
 
 #page=st.sidebar.radio("Aller vers", pages)
@@ -176,7 +220,8 @@ page = st.sidebar.pills(
     options=option_map.keys(),
     format_func=lambda option: option_map[option],
     selection_mode="single",
-    default=pages[0]
+    default=pages[0],
+    key="nav_page",
 )
 # --------------------------------------------------------------------------- #
 # Introduction
@@ -895,100 +940,204 @@ F1-macro de 0,16 à 0,25 selon la stratégie — tout modèle utile doit largeme
     st.image(str(PROJECT_ROOT / "reports" / "figures" / "rpt_f1_global.png"), caption="F1-macro — comparaison Machine Learning vs Deep Learning (test)", width=750)
 
     st.write("#### Tableau récapitulatif final")
+    st.caption(
+        "Cliquez sur une ligne pour ouvrir la diapo détaillée du modèle, quand elle "
+        "existe (SVM, Régression Logistique, XGBoost, CNN 4 couches tuned)."
+    )
     recap = pd.read_csv(str(PROJECT_ROOT / "models" / "model_comparison_recap_final.csv"))
-    st.dataframe(recap, hide_index=True, width="stretch", height=420)
+    selection_recap = st.dataframe(
+        recap,
+        hide_index=True,
+        width="stretch",
+        height=420,
+        on_select="rerun",
+        selection_mode="single-row",
+        key="recap_table",
+    )
+
+    lignes_selectionnees = selection_recap.selection.rows if selection_recap else []
+    if lignes_selectionnees:
+        nom_modele = recap.iloc[lignes_selectionnees[0]]["modele"]
+        cible = RECAP_ROW_TO_CIBLE.get(nom_modele)
+        if cible is None:
+            st.info(f"Pas de diapo détaillée disponible pour « {nom_modele} ».")
+        else:
+            st.session_state["nav_page"] = cible["page"]
+            if "modele" in cible:
+                cle_modele = "ml_modele_select" if cible["page"] == pages[5] else "dl_modele_select"
+                st.session_state[cle_modele] = cible["modele"]
+            if "variante" in cible:
+                cle_variante = (
+                    "logreg_variante_select" if cible["modele"] == "Régression Logistique"
+                    else "xgboost_variante_select"
+                )
+                st.session_state[cle_variante] = cible["variante"]
+            st.rerun()
 
 
 # --------------------------------------------------------------------------- #
-# Modèle SVM
+# Modèles Machine Learning (SVM, Régression Logistique, XGBoost)
 # --------------------------------------------------------------------------- #
 if page == pages[5] :
-    st.write("### ML Modèle SVM")
+    st.write("### ML : Modèles")
 
-    try:
-        model_loaded = get_model_SVM(model_SVM_path)
-    except Exception as e:
-        st.error(f"Impossible de charger le modèle SVM: {e}")
-        st.stop()
+    modele_ml = st.pills(
+        "Modèle",
+        ["SVM", "Régression Logistique", "XGBoost"],
+        selection_mode="single",
+        default="SVM",
+        key="ml_modele_select",
+    )
 
-    try:
-        scaler_loaded = get_scaler_SVM(scaler_SVM_path)
-    except Exception as e:
-        st.error(f"Impossible de charger le scaler SVM : {e}")
-        st.stop()
+    if modele_ml == "SVM":
+        st.write("#### SVM")
 
-    try:
-        df_test = pd.read_csv(csv_test)
-        df_validation = pd.read_csv(csv_validation)
-    except Exception as e:
-        st.error(f"Impossible de charger les fichiers de features : {e}")
-        st.stop()
+        try:
+            model_loaded = get_model_SVM(model_SVM_path)
+        except Exception as e:
+            st.error(f"Impossible de charger le modèle SVM: {e}")
+            st.stop()
 
-    X_test = df_test.drop(['filename', 'classe'], axis=1)
-    y_test = df_test['classe']
+        try:
+            scaler_loaded = get_scaler_SVM(scaler_SVM_path)
+        except Exception as e:
+            st.error(f"Impossible de charger le scaler SVM : {e}")
+            st.stop()
 
-    X_val = df_validation.drop(['filename', 'classe'], axis=1)
-    y_val = df_validation['classe']
+        try:
+            df_test = pd.read_csv(csv_test)
+            df_validation = pd.read_csv(csv_validation)
+        except Exception as e:
+            st.error(f"Impossible de charger les fichiers de features : {e}")
+            st.stop()
 
-    X_test_scaled = scaler_loaded.transform(X_test)
-    X_val_scaled = scaler_loaded.transform(X_val)
+        X_test = df_test.drop(['filename', 'classe'], axis=1)
+        y_test = df_test['classe']
 
-    with st.spinner("Prédiction sur le jeu de test…"):
-        test_pred_class = model_loaded.predict(X_test_scaled)
+        X_val = df_validation.drop(['filename', 'classe'], axis=1)
+        y_val = df_validation['classe']
 
-    with st.spinner("Prédiction sur le jeu de validation…"):
-        val_pred_class = model_loaded.predict(X_val_scaled)
+        X_test_scaled = scaler_loaded.transform(X_test)
+        X_val_scaled = scaler_loaded.transform(X_val)
 
-    class_names = sorted(y_test.unique())
+        with st.spinner("Prédiction sur le jeu de test…"):
+            test_pred_class = model_loaded.predict(X_test_scaled)
 
-    tab_val, tab_test = st.tabs(["Validation", "Test"])
-    with tab_val:
-        evaluer(y_val, val_pred_class, class_names, "Résultats — Validation")
-    with tab_test:
-        evaluer(y_test, test_pred_class, class_names, "Résultats — Test")
+        with st.spinner("Prédiction sur le jeu de validation…"):
+            val_pred_class = model_loaded.predict(X_val_scaled)
+
+        class_names = sorted(y_test.unique())
+
+        tab_val, tab_test = st.tabs(["Validation", "Test"])
+        with tab_val:
+            evaluer(y_val, val_pred_class, class_names, "Résultats — Validation")
+        with tab_test:
+            evaluer(y_test, test_pred_class, class_names, "Résultats — Test")
+
+    elif modele_ml == "Régression Logistique":
+        st.write("#### Régression Logistique")
+        st.caption(
+            "Résultats précalculés (issus du rapport de comparaison), identiques quelle "
+            "que soit la machine ou la version des librairies utilisées le jour J. "
+            "Seul le jeu de test a été évalué pour ces deux variantes."
+        )
+
+        variante_logreg = st.pills(
+            "Variante",
+            list(LOGREG_RESULTS.keys()),
+            selection_mode="single",
+            default="Balanced (avec pondération)",
+            key="logreg_variante_select",
+        )
+
+        evaluer_depuis_matrice(
+            LOGREG_RESULTS[variante_logreg]["Test"],
+            FROZEN_CLASS_NAMES,
+            f"Résultats — Test ({variante_logreg})",
+        )
+
+    elif modele_ml == "XGBoost":
+        st.write("#### XGBoost")
+        st.caption(
+            "Résultats précalculés (issus du rapport de comparaison), identiques quelle "
+            "que soit la machine ou la version des librairies utilisées le jour J."
+        )
+
+        variante_xgb = st.pills(
+            "Variante",
+            list(XGBOOST_RESULTS.keys()),
+            selection_mode="single",
+            default="Baseline",
+            key="xgboost_variante_select",
+        )
+
+        tab_val, tab_test = st.tabs(["Validation", "Test"])
+        with tab_val:
+            evaluer_depuis_matrice(
+                XGBOOST_RESULTS[variante_xgb]["Validation"],
+                FROZEN_CLASS_NAMES,
+                "Résultats — Validation",
+            )
+        with tab_test:
+            evaluer_depuis_matrice(
+                XGBOOST_RESULTS[variante_xgb]["Test"],
+                FROZEN_CLASS_NAMES,
+                "Résultats — Test",
+            )
 
 
 # --------------------------------------------------------------------------- #
-# Modèle CNN
+# Modèles Deep Learning (CNN)
 # --------------------------------------------------------------------------- #
 if page == pages[6] :
-    st.write("### DL Modèle CNN 4 niveaux")
-    try:
-        model_loaded = get_model_CNN(model_CNN_path)
-    except Exception as e:
-        st.error(f"Impossible de charger le modèle  CNN256 : {e}")
-        st.stop()
+    st.write("### DL : Modèles")
 
-    with st.expander("📋 Résumé du modèle"):
-        summary_lines = []
-        model_loaded.summary(print_fn=lambda x: summary_lines.append(x))
-        st.code("\n".join(summary_lines))
+    modele_dl = st.pills(
+        "Modèle",
+        ["CNN 4 niveaux"],
+        selection_mode="single",
+        default="CNN 4 niveaux",
+        key="dl_modele_select",
+    )
 
-    try:
-        val_ds = get_dataset(val_dir, img_h=size_img,img_w=size_img, batch_size=32, color_mode='grayscale')
-        test_ds = get_dataset(test_dir,img_h=size_img,img_w=size_img,  batch_size=32, color_mode='grayscale')
-    except Exception as e:
-        st.error(f"Impossible de charger les jeux de données : {e}")
-        st.stop()
+    if modele_dl == "CNN 4 niveaux":
+        st.write("#### CNN 4 niveaux")
+        try:
+            model_loaded = get_model_CNN(model_CNN_path)
+        except Exception as e:
+            st.error(f"Impossible de charger le modèle  CNN256 : {e}")
+            st.stop()
 
-    class_names = test_ds.class_names
+        with st.expander("📋 Résumé du modèle"):
+            summary_lines = []
+            model_loaded.summary(print_fn=lambda x: summary_lines.append(x))
+            st.code("\n".join(summary_lines))
 
-    with st.spinner("Prédiction sur le jeu de test…"):
-        test_pred = model_loaded.predict(test_ds)
-        test_pred_class = test_pred.argmax(axis=1)
-        y_true_test_class = np.concatenate([labels for _, labels in test_ds], axis=0)
+        try:
+            val_ds = get_dataset(val_dir, img_h=size_img,img_w=size_img, batch_size=32, color_mode='grayscale')
+            test_ds = get_dataset(test_dir,img_h=size_img,img_w=size_img,  batch_size=32, color_mode='grayscale')
+        except Exception as e:
+            st.error(f"Impossible de charger les jeux de données : {e}")
+            st.stop()
 
-    with st.spinner("Prédiction sur le jeu de validation…"):
-        val_pred = model_loaded.predict(val_ds)
-        val_pred_class = val_pred.argmax(axis=1)
-        y_true_val_class = np.concatenate([labels for _, labels in val_ds], axis=0)
+        class_names = test_ds.class_names
+
+        with st.spinner("Prédiction sur le jeu de test…"):
+            test_pred = model_loaded.predict(test_ds)
+            test_pred_class = test_pred.argmax(axis=1)
+            y_true_test_class = np.concatenate([labels for _, labels in test_ds], axis=0)
+
+        with st.spinner("Prédiction sur le jeu de validation…"):
+            val_pred = model_loaded.predict(val_ds)
+            val_pred_class = val_pred.argmax(axis=1)
+            y_true_val_class = np.concatenate([labels for _, labels in val_ds], axis=0)
 
 
-    tab_val, tab_test = st.tabs(["Validation", "Test"])
-    with tab_val:
-        evaluer(y_true_val_class, val_pred_class, class_names, "Résultats — Validation")
-    with tab_test:
-        evaluer(y_true_test_class, test_pred_class, class_names, "Résultats — Test")
+        tab_val, tab_test = st.tabs(["Validation", "Test"])
+        with tab_val:
+            evaluer(y_true_val_class, val_pred_class, class_names, "Résultats — Validation")
+        with tab_test:
+            evaluer(y_true_test_class, test_pred_class, class_names, "Résultats — Test")
 
 
 # --------------------------------------------------------------------------- #
