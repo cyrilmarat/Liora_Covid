@@ -427,14 +427,13 @@ if page == pages[1] :
 
     st.badge("=> Après visualisation des outliers sur les écarts de dimension => pas de problème au niveau de l'algorithme ", icon=":material/check:", color="green")
     
-    st.write("Pour chaque classe, les images dont la distance quadratique moyenne (MSE) par rapport à l'image moyenne de leur classe dépasse un seuil ont été identifiées comme atypiques :")
-    st.write("- Normal : 11 outliers (MSE > 2500)")
-    st.write("- COVID : 34 outliers (MSE > 4 000)")
-    st.write("- Lung Opacity : 20 outliers (MSE > 4 000)")
-    st.write("- Viral Pneumonia : 32 outliers (MSE > 3 000)")
-    st.write("Les distances sont calculées en travaillant sur une image redimensionnée à 50x50 pixels")
+    st.write("La détection des images floues a été réalisée selon le calcul de la variance du Laplacien (qui évalue la netteté de l'image). Les images présentant la variance la plus faible sont celles qui ont les contours les plus diffus")
+    st.write("- Normal : 52 images floues")
+    st.write("- COVID : 19  images floues")
+    st.write("- Lung Opacity : 24 images floues")
+    st.write("- Viral Pneumonia : 11 images floues")
     
-    st.badge("=>Par le même mécanisme, les images dont la variance du laplacien n atteignant pas un seuil ont été, cette fois, considérés comme floues et supprimées. ", icon=":material/check:", color="green")
+    st.badge("=>Par le même mécanisme, les images dont la variance du laplacien n'atteignant pas un seuil ont été, cette fois, considérés comme floues et supprimées. ", icon=":material/check:", color="green")
              
     st.write("### Doublons")
     st.write("Pour chaque classe et pour chaque image, une distance quadratique moyenne moyenne (MSE) a été calculée entre chaque image :")
