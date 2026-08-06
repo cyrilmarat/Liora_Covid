@@ -334,7 +334,42 @@ def sauvegarder_resultats(model_key, class_names, val_y_true, val_y_pred, test_y
     return chemin
 
 
-def afficher_section_avec_calcul(model_key: str, fonction_calcul):
+# --------------------------------------------------------------------------- #
+# Stockage en dur du résumé (architecture) d'un modèle Keras
+# --------------------------------------------------------------------------- #
+def _cle_fichier_summary(model_key: str) -> Path:
+    """Construit le chemin du fichier texte stockant le résumé (summary) d'un
+    modèle, à partir de la même clé que celle utilisée pour les résultats."""
+    safe = "".join(c if c.isalnum() else "_" for c in model_key).strip("_").lower()
+    return RESULTS_DIR / f"{safe}_summary.txt"
+
+
+def charger_summary_stocke(model_key: str):
+    """Charge le résumé du modèle précédemment stocké en dur.
+
+    Renvoie None si aucun résumé n'a encore été stocké, ou si le fichier est
+    illisible — sans jamais lever d'exception."""
+    chemin = _cle_fichier_summary(model_key)
+    if not chemin.exists():
+        return None
+    try:
+        with open(chemin, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception:
+        return None
+
+
+def sauvegarder_summary(model_key: str, summary_text: str) -> Path:
+    """Stocke en dur (fichier texte) le résumé (architecture) d'un modèle
+    Keras, pour pouvoir l'afficher même quand le modèle n'est plus
+    chargeable. Écrase le fichier existant s'il y en avait déjà un."""
+    chemin = _cle_fichier_summary(model_key)
+    with open(chemin, "w", encoding="utf-8") as f:
+        f.write(summary_text)
+    return chemin
+
+
+def afficher_section_avec_calcul(model_key: str, fonction_calcul, disabled: bool = False, summary_text: str | None = None):
     """Affiche les résultats val/test d'un modèle avec un bouton Calculer/Recalculer.
 
     Les résultats stockés sur disque (s'ils existent) sont affichés directement,
@@ -342,7 +377,14 @@ def afficher_section_avec_calcul(model_key: str, fonction_calcul):
     appelé uniquement au clic sur le bouton (ou s'il n'y a encore aucun résultat
     stocké et que l'utilisateur clique) ; il doit renvoyer
     (class_names, val_y_true, val_y_pred, test_y_true, test_y_pred). Le résultat
-    est alors stocké en dur et écrase le fichier existant."""
+    est alors stocké en dur et écrase le fichier existant.
+
+    `disabled` grise le bouton (typiquement quand le modèle Keras n'a pas pu
+    être chargé) : le recalcul est alors impossible tant que le modèle n'est
+    pas de nouveau disponible. `summary_text`, s'il est fourni, est stocké en
+    dur au clic sur le bouton, en plus des résultats — c'est ce texte qui est
+    ensuite ré-affiché dans « Résumé du modèle » si le modèle devient
+    indisponible."""
     resultats = charger_resultats_stockes(model_key)
 
     col_bouton, col_info = st.columns([1, 3])
@@ -350,19 +392,24 @@ def afficher_section_avec_calcul(model_key: str, fonction_calcul):
         clic = st.button(
             "🔄 Recalculer" if resultats else "▶️ Calculer",
             key=f"calc_btn_{model_key}",
+            disabled=disabled,
         )
     with col_info:
-        if resultats:
+        if disabled:
+            st.caption("Modèle indisponible — recalcul désactivé.")
+        elif resultats:
             st.caption(f"Résultats stockés le {resultats['calcule_le']}.")
         else:
             st.caption("Aucun résultat stocké pour l'instant — lancez le calcul.")
 
-    if clic:
+    if clic and not disabled:
         with st.spinner("Calcul des prédictions en cours…"):
             class_names, val_y_true, val_y_pred, test_y_true, test_y_pred = fonction_calcul()
             sauvegarder_resultats(
                 model_key, class_names, val_y_true, val_y_pred, test_y_true, test_y_pred
             )
+            if summary_text:
+                sauvegarder_summary(model_key, summary_text)
         resultats = charger_resultats_stockes(model_key)
         st.success("Résultats recalculés et stockés.")
 
@@ -402,6 +449,7 @@ pages=[
     "11.Conclusion",
     "12.Limites & perspectives"
 ]
+
 
 # --------------------------------------------------------------------------- #
 # Table de correspondance : ligne du tableau récapitulatif (diapo 5) -> diapo
@@ -1377,14 +1425,18 @@ if page == pages[5] :
     img_h = img_w = size_img
     preprocess_fn = None
 
+    # `model_loaded` reste à None si le fichier .keras est introuvable/corrompu :
+    # on n'interrompt plus le script (plus de st.stop()) pour permettre
+    # l'affichage du résumé stocké et le grisage du bouton Recalculer.
+    model_loaded = None
+
     if modele_dl == "CNN 6 niveaux":
         st.write("#### CNN 6 niveaux")
         st.image(courbe_CNN1024_path, width=600)
         try:
             model_loaded = get_model_CNN1024()
         except Exception as e:
-            st.error(f"Impossible de charger le modèle  CNN1024 : {e}")
-            st.stop()
+            st.warning(f"⚠️ Modèle CNN1024 indisponible ({e}). Affichage à partir des données stockées, si disponibles.")
 
 
     elif modele_dl == "CNN 5 niveaux":
@@ -1393,8 +1445,7 @@ if page == pages[5] :
         try:
             model_loaded = get_model_CNN512()
         except Exception as e:
-            st.error(f"Impossible de charger le modèle  CNN512 : {e}")
-            st.stop()
+            st.warning(f"⚠️ Modèle CNN512 indisponible ({e}). Affichage à partir des données stockées, si disponibles.")
 
     elif modele_dl == "CNN 4 niveaux":
         st.write("#### CNN 4 niveaux")
@@ -1402,8 +1453,7 @@ if page == pages[5] :
         try:
             model_loaded = get_model_CNN256()
         except Exception as e:
-            st.error(f"Impossible de charger le modèle  CNN256 : {e}")
-            st.stop()
+            st.warning(f"⚠️ Modèle CNN256 indisponible ({e}). Affichage à partir des données stockées, si disponibles.")
             
     elif modele_dl == "CNN 4 niveaux tuned":
         st.write("#### CNN 4 niveaux tuned")
@@ -1414,17 +1464,15 @@ if page == pages[5] :
         try:
             model_loaded = get_model_CNN256_tuned()
         except Exception as e:
-            st.error(f"Impossible de charger le modèle  CNN256 tuned: {e}")
-            st.stop()
+            st.warning(f"⚠️ Modèle CNN256 tuned indisponible ({e}). Affichage à partir des données stockées, si disponibles.")
     
     elif modele_dl == "CNN 3 niveaux":
         st.write("#### CNN 3 niveaux")
+        st.image(courbe__CNN128_path, width=600)
         try:
             model_loaded = get_model_CNN128()
-            st.image(courbe__CNN128_path, width=600)
         except Exception as e:
-            st.error(f"Impossible de charger le modèle  CNN128 : {e}")
-            st.stop()
+            st.warning(f"⚠️ Modèle CNN128 indisponible ({e}). Affichage à partir des données stockées, si disponibles.")
             
     elif modele_dl == "CNN 2 niveaux":
             st.write("#### CNN 2 niveaux")
@@ -1432,8 +1480,7 @@ if page == pages[5] :
             try:
                 model_loaded = get_model_CNN64()
             except Exception as e:
-                st.error(f"Impossible de charger le modèle  CNN64 : {e}")
-                st.stop()
+                st.warning(f"⚠️ Modèle CNN64 indisponible ({e}). Affichage à partir des données stockées, si disponibles.")
                 
     elif modele_dl == "CNN 1 niveaux":
                 st.write("#### CNN 1 niveaux")
@@ -1441,8 +1488,7 @@ if page == pages[5] :
                 try:
                     model_loaded = get_model_CNN32()
                 except Exception as e:
-                    st.error(f"Impossible de charger le modèle  CNN32 : {e}")
-                    st.stop()
+                    st.warning(f"⚠️ Modèle CNN32 indisponible ({e}). Affichage à partir des données stockées, si disponibles.")
 
     elif modele_dl == "VGG16":
         st.write("#### VGG16 (transfer learning)")
@@ -1450,14 +1496,11 @@ if page == pages[5] :
                 " stratégie de transfert learning : Fine-Tuning partiel de la dernière couche profonde sur 20 epoch"
             )
         st.image(courbe_VGG16_path, width=600)
-        
+
         try:
-            
             model_loaded = get_model_VGG16_finetuned()
-            
         except Exception as e:
-            st.error(f"Impossible de charger le modèle VGG16 : {e}")
-            st.stop()
+            st.warning(f"⚠️ Modèle VGG16 indisponible ({e}). Affichage à partir des données stockées, si disponibles.")
 
         color_mode = "rgb"
         img_h = img_w = 224
@@ -1470,12 +1513,9 @@ if page == pages[5] :
             )
         st.image(courbe_Inceptionv3_path, width=600)
         try:
-            
-                model_loaded = get_model_InceptionV3_finetuned()
-            
+            model_loaded = get_model_InceptionV3_finetuned()
         except Exception as e:
-            st.error(f"Impossible de charger le modèle InceptionV3 : {e}")
-            st.stop()
+            st.warning(f"⚠️ Modèle InceptionV3 indisponible ({e}). Affichage à partir des données stockées, si disponibles.")
 
         color_mode = "rgb"
         img_h = img_w = 299
@@ -1491,8 +1531,7 @@ if page == pages[5] :
         try:
             model_loaded = get_model_DenseNet()
         except Exception as e:
-            st.error(f"Impossible de charger le modèle DenseNet : {e}")
-            st.stop()
+            st.warning(f"⚠️ Modèle DenseNet indisponible ({e}). Affichage à partir des données stockées, si disponibles.")
 
         color_mode = "rgb"
         img_h = img_w = 299
@@ -1503,10 +1542,26 @@ if page == pages[5] :
         # et corrompt les prédictions.
         preprocess_fn = None
 
+    # ----------------------------------------------------------------------- #
+    # Résumé du modèle : lu en direct sur le modèle chargé s'il est
+    # disponible (et alors stocké en dur pour servir de secours plus tard),
+    # sinon relu depuis le fichier stocké par un précédent calcul — sans
+    # jamais lever d'erreur si le modèle .keras est absent/corrompu.
+    # ----------------------------------------------------------------------- #
+    summary_text = None
     with st.expander("📋 Résumé du modèle"):
-        summary_lines = []
-        model_loaded.summary(print_fn=lambda x: summary_lines.append(x))
-        st.code("\n".join(summary_lines))
+        if model_loaded is not None:
+            summary_lines = []
+            model_loaded.summary(print_fn=lambda x: summary_lines.append(x))
+            summary_text = "\n".join(summary_lines)
+            st.code(summary_text)
+        else:
+            summary_text = charger_summary_stocke(modele_dl)
+            if summary_text:
+                st.info("Modèle indisponible : résumé affiché depuis la dernière sauvegarde.")
+                st.code(summary_text)
+            else:
+                st.info("Modèle indisponible et aucun résumé n'a encore été stocké pour ce modèle.")
 
     def calculer_dl():
         try:
@@ -1532,8 +1587,14 @@ if page == pages[5] :
 
         return class_names, y_true_val_class, val_pred_class, y_true_test_class, test_pred_class
 
-    # Une clé de stockage par modèle sélectionné dans les pills.
-    afficher_section_avec_calcul(modele_dl, calculer_dl)
+    # Une clé de stockage par modèle sélectionné dans les pills. Le bouton
+    # Recalculer est grisé si le modèle n'a pas pu être chargé, et le résumé
+    # affiché est stocké en dur à chaque recalcul réussi.
+    afficher_section_avec_calcul(
+        modele_dl, calculer_dl,
+        disabled=(model_loaded is None),
+        summary_text=summary_text,
+    )
 
 
 # --------------------------------------------------------------------------- #
