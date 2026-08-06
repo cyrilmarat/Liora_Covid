@@ -102,7 +102,7 @@ class SparseF1Score(tf.keras.metrics.F1Score):
 # --------------------------------------------------------------------------- #
 st.set_page_config(page_title=" Analyse des radiographies pulmonaires", layout="wide")
 st.title("🫁 Analyse des radiographies pulmonaires 🫁 ")
-st.caption("Classification COVID / NORMAL / LUNG_OPACITY / VIRAL_PNEUMONIA")
+st.caption("Classification COVID / NORMAL / LUNG_OPACITY / VIRAL_PNEUMONIA | https://lioracovid.streamlit.app/")
 
 
 
