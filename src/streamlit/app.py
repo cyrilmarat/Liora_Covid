@@ -16,6 +16,8 @@ from sklearn import metrics
 import joblib
 import base64
 import sys
+import json
+from datetime import datetime
 from pathlib import Path
 
 # --------------------------------------------------------------------------- #
@@ -55,6 +57,12 @@ scaler_SVM_path = str(PROJECT_ROOT / "models" / "svm" / "scaler_svm.joblib")
 scaler_SVM_Weighted_path = str(PROJECT_ROOT / "models" / "svm" / "scaler_svm_weighted.joblib")
 csv_test = str(PROJECT_ROOT / "csv" / "test_features.csv")
 csv_validation = str(PROJECT_ROOT / "csv" / "validation_features.csv")
+
+# Répertoire de stockage en dur des résultats calculés (val/test) par modèle.
+# Remplace le cache mémoire (perdu au redémarrage de l'app) par des fichiers
+# JSON persistants sur disque, un par modèle/variante.
+RESULTS_DIR = PROJECT_ROOT / "results_cache"
+RESULTS_DIR.mkdir(exist_ok=True)
 
 courbe_CNN1024_path = str(PROJECT_ROOT / "models" / "cnn1024" / "cnn_1024.png")
 courbe_CNN512_path = str(PROJECT_ROOT / "models" / "cnn512" / "cnn_512.png")
@@ -187,20 +195,6 @@ def get_dataset(directory: str, img_h: int, img_w: int, batch_size: int, color_m
     )
 
 
-@st.cache_data(show_spinner=False)
-def predict_ds(_model, _ds, model_key: str, ds_name: str):
-    """Prédictions mises en cache pour un couple (modèle, dataset).
-
-    `_model` et `_ds` sont préfixés par `_` pour ne pas être hashés par
-    Streamlit (objets non hashables : modèle Keras, tf.data.Dataset).
-    `model_key` (nom du modèle sélectionné) et `ds_name` ("val"/"test")
-    servent de clé de cache explicite : sans eux, Streamlit ne pourrait pas
-    détecter un changement de modèle ou de dataset et renverrait un résultat
-    périmé.
-    """
-    return _model.predict(_ds)
-
-
 @st.cache_resource(show_spinner="Chargement du jeu de données…")
 def get_dataset_dl(directory: str, img_h: int, img_w: int, batch_size: int, color_mode: str, _preprocess_fn=None):
     """Charge un jeu de données pour un modèle de Deep Learning.
@@ -225,15 +219,31 @@ def get_dataset_dl(directory: str, img_h: int, img_w: int, batch_size: int, colo
 
 
 def evaluer(y_true, y_pred, class_names, titre):
-    """Affiche accuracy, classification_report et matrice de confusion dans Streamlit."""
+    """Affiche accuracy, F1-macro, rappel COVID, classification_report et
+    matrice de confusion dans Streamlit."""
     acc = accuracy_score(y_true, y_pred)
-
-    st.subheader(titre)
-    st.metric("Accuracy", f"{acc:.4f}")
 
     report_dict = classification_report(
         y_true, y_pred, target_names=class_names, zero_division=0, output_dict=True
     )
+    f1_macro = report_dict["macro avg"]["f1-score"]
+
+    # Recherche insensible à la casse/accents du libellé de la classe COVID,
+    # pour rester robuste quel que soit le nommage exact des dossiers/labels.
+    nom_covid = next(
+        (nom for nom in class_names if "covid" in nom.lower()), None
+    )
+    rappel_covid = report_dict[nom_covid]["recall"] if nom_covid is not None else None
+
+    st.subheader(titre)
+    col_acc, col_f1, col_covid = st.columns(3)
+    col_acc.metric("Accuracy", f"{acc:.4f}")
+    col_f1.metric("F1-score macro", f"{f1_macro:.4f}")
+    col_covid.metric(
+        "Rappel COVID",
+        f"{rappel_covid:.4f}" if rappel_covid is not None else "N/A",
+    )
+
     st.dataframe(pd.DataFrame(report_dict).transpose().round(3))
 
     cm = confusion_matrix(y_true, y_pred, normalize="true")
@@ -274,6 +284,102 @@ def evaluer_depuis_matrice(matrice_confusion, class_names, titre):
             y_pred.extend([label_predit] * effectif)
 
     return evaluer(pd.Series(y_true), pd.Series(y_pred), class_names, titre)
+
+
+# --------------------------------------------------------------------------- #
+# Stockage en dur des résultats calculés (remplace le cache mémoire)
+# --------------------------------------------------------------------------- #
+def _cle_fichier_resultats(model_key: str) -> Path:
+    """Construit un nom de fichier sûr (sans espaces/accents/caractères spéciaux)
+    à partir de la clé du modèle, pour servir de nom de fichier JSON."""
+    safe = "".join(c if c.isalnum() else "_" for c in model_key).strip("_").lower()
+    return RESULTS_DIR / f"{safe}.json"
+
+
+def charger_resultats_stockes(model_key: str):
+    """Charge les résultats (val/test) précédemment stockés en dur pour ce modèle.
+
+    Renvoie None si aucun résultat n'a encore été calculé/stocké, ou si le
+    fichier est illisible."""
+    chemin = _cle_fichier_resultats(model_key)
+    if not chemin.exists():
+        return None
+    try:
+        with open(chemin, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def sauvegarder_resultats(model_key, class_names, val_y_true, val_y_pred, test_y_true, test_y_pred) -> Path:
+    """Stocke en dur (fichier JSON sur disque) les prédictions val/test d'un
+    modèle, pour ne plus avoir à refaire l'inférence à chaque affichage de
+    page. Écrase le fichier existant s'il y en avait déjà un."""
+    donnees = {
+        "class_names": list(class_names),
+        "calcule_le": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+        "validation": {
+            "y_true": np.asarray(val_y_true).tolist(),
+            "y_pred": np.asarray(val_y_pred).tolist(),
+        },
+        "test": {
+            "y_true": np.asarray(test_y_true).tolist(),
+            "y_pred": np.asarray(test_y_pred).tolist(),
+        },
+    }
+    chemin = _cle_fichier_resultats(model_key)
+    with open(chemin, "w", encoding="utf-8") as f:
+        json.dump(donnees, f)
+    return chemin
+
+
+def afficher_section_avec_calcul(model_key: str, fonction_calcul):
+    """Affiche les résultats val/test d'un modèle avec un bouton Calculer/Recalculer.
+
+    Les résultats stockés sur disque (s'ils existent) sont affichés directement,
+    sans refaire l'inférence. `fonction_calcul` est un callable sans argument,
+    appelé uniquement au clic sur le bouton (ou s'il n'y a encore aucun résultat
+    stocké et que l'utilisateur clique) ; il doit renvoyer
+    (class_names, val_y_true, val_y_pred, test_y_true, test_y_pred). Le résultat
+    est alors stocké en dur et écrase le fichier existant."""
+    resultats = charger_resultats_stockes(model_key)
+
+    col_bouton, col_info = st.columns([1, 3])
+    with col_bouton:
+        clic = st.button(
+            "🔄 Recalculer" if resultats else "▶️ Calculer",
+            key=f"calc_btn_{model_key}",
+        )
+    with col_info:
+        if resultats:
+            st.caption(f"Résultats stockés le {resultats['calcule_le']}.")
+        else:
+            st.caption("Aucun résultat stocké pour l'instant — lancez le calcul.")
+
+    if clic:
+        with st.spinner("Calcul des prédictions en cours…"):
+            class_names, val_y_true, val_y_pred, test_y_true, test_y_pred = fonction_calcul()
+            sauvegarder_resultats(
+                model_key, class_names, val_y_true, val_y_pred, test_y_true, test_y_pred
+            )
+        resultats = charger_resultats_stockes(model_key)
+        st.success("Résultats recalculés et stockés.")
+
+    if not resultats:
+        st.info("Cliquez sur « Calculer » pour lancer l'inférence et générer les résultats.")
+        return
+
+    tab_val, tab_test = st.tabs(["Validation", "Test"])
+    with tab_val:
+        evaluer(
+            resultats["validation"]["y_true"], resultats["validation"]["y_pred"],
+            resultats["class_names"], "Résultats — Validation",
+        )
+    with tab_test:
+        evaluer(
+            resultats["test"]["y_true"], resultats["test"]["y_pred"],
+            resultats["class_names"], "Résultats — Test",
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -1111,55 +1217,52 @@ if page == pages[4] :
         
         if svm_ml == "normal":
             st.write("#### SVM : Best gridsearch ")
-            model_SVM_path_select=model_SVM_path
-            scaler_SVM_path=scaler_SVM_path
+            model_SVM_path_select = model_SVM_path
+            scaler_SVM_path_select = scaler_SVM_path
         if svm_ml == "weighted":
             st.write("#### SVM : Best gridsearch + weighted")
-            model_SVM_path_select=model_SVM_Weighted_path
-            scaler_SVM_path=scaler_SVM_Weighted_path
+            model_SVM_path_select = model_SVM_Weighted_path
+            scaler_SVM_path_select = scaler_SVM_Weighted_path
 
+        def calculer_svm():
+            try:
+                model_loaded = get_model_SVM(model_SVM_path_select)
+            except Exception as e:
+                st.error(f"Impossible de charger le modèle SVM: {e}")
+                st.stop()
 
-        try:
-            model_loaded = get_model_SVM(model_SVM_path_select)
-        except Exception as e:
-            st.error(f"Impossible de charger le modèle SVM: {e}")
-            st.stop()
+            try:
+                scaler_loaded = get_scaler_SVM(scaler_SVM_path_select)
+            except Exception as e:
+                st.error(f"Impossible de charger le scaler SVM : {e}")
+                st.stop()
 
-        try:
-            scaler_loaded = get_scaler_SVM(scaler_SVM_path)
-        except Exception as e:
-            st.error(f"Impossible de charger le scaler SVM : {e}")
-            st.stop()
+            try:
+                df_test = pd.read_csv(csv_test)
+                df_validation = pd.read_csv(csv_validation)
+            except Exception as e:
+                st.error(f"Impossible de charger les fichiers de features : {e}")
+                st.stop()
 
-        try:
-            df_test = pd.read_csv(csv_test)
-            df_validation = pd.read_csv(csv_validation)
-        except Exception as e:
-            st.error(f"Impossible de charger les fichiers de features : {e}")
-            st.stop()
+            X_test = df_test.drop(['filename', 'classe'], axis=1)
+            y_test = df_test['classe']
 
-        X_test = df_test.drop(['filename', 'classe'], axis=1)
-        y_test = df_test['classe']
+            X_val = df_validation.drop(['filename', 'classe'], axis=1)
+            y_val = df_validation['classe']
 
-        X_val = df_validation.drop(['filename', 'classe'], axis=1)
-        y_val = df_validation['classe']
+            X_test_scaled = scaler_loaded.transform(X_test)
+            X_val_scaled = scaler_loaded.transform(X_val)
 
-        X_test_scaled = scaler_loaded.transform(X_test)
-        X_val_scaled = scaler_loaded.transform(X_val)
-
-        with st.spinner("Prédiction sur le jeu de test…"):
             test_pred_class = model_loaded.predict(X_test_scaled)
-
-        with st.spinner("Prédiction sur le jeu de validation…"):
             val_pred_class = model_loaded.predict(X_val_scaled)
 
-        class_names = sorted(y_test.unique())
+            class_names = sorted(y_test.unique())
 
-        tab_val, tab_test = st.tabs(["Validation", "Test"])
-        with tab_val:
-            evaluer(y_val, val_pred_class, class_names, "Résultats — Validation")
-        with tab_test:
-            evaluer(y_test, test_pred_class, class_names, "Résultats — Test")
+            return class_names, y_val, val_pred_class, y_test, test_pred_class
+
+        # Une clé de stockage par variante (normal/weighted), pour ne pas
+        # écraser les résultats de l'une avec ceux de l'autre.
+        afficher_section_avec_calcul(f"SVM_{svm_ml}", calculer_svm)
 
     elif modele_ml == "Régression Logistique":
         st.write("#### Régression Logistique")
@@ -1357,42 +1460,44 @@ if page == pages[5] :
 
         color_mode = "rgb"
         img_h = img_w = 299
-        preprocess_fn = densenet_preprocess_input
+        # Le modèle densenet.keras embarque déjà sa propre normalisation
+        # (true_divide / add / true_divide_1 juste après l'Input, cf. notebook
+        # d'entraînement où densenet_preprocess_input n'est jamais appliqué
+        # manuellement). Appliquer preprocess_fn ici double le preprocessing
+        # et corrompt les prédictions.
+        preprocess_fn = None
 
     with st.expander("📋 Résumé du modèle"):
         summary_lines = []
         model_loaded.summary(print_fn=lambda x: summary_lines.append(x))
         st.code("\n".join(summary_lines))
 
-    try:
-        val_ds, class_names = get_dataset_dl(
-            val_dir, img_h=img_h, img_w=img_w, batch_size=32,
-            color_mode=color_mode, _preprocess_fn=preprocess_fn,
-        )
-        test_ds, class_names = get_dataset_dl(
-            test_dir, img_h=img_h, img_w=img_w, batch_size=32,
-            color_mode=color_mode, _preprocess_fn=preprocess_fn,
-        )
-    except Exception as e:
-        st.error(f"Impossible de charger les jeux de données : {e}")
-        st.stop()
+    def calculer_dl():
+        try:
+            val_ds, class_names = get_dataset_dl(
+                val_dir, img_h=img_h, img_w=img_w, batch_size=32,
+                color_mode=color_mode, _preprocess_fn=preprocess_fn,
+            )
+            test_ds, class_names = get_dataset_dl(
+                test_dir, img_h=img_h, img_w=img_w, batch_size=32,
+                color_mode=color_mode, _preprocess_fn=preprocess_fn,
+            )
+        except Exception as e:
+            st.error(f"Impossible de charger les jeux de données : {e}")
+            st.stop()
 
-    with st.spinner("Prédiction sur le jeu de test…"):
-        test_pred = predict_ds(model_loaded, test_ds, modele_dl, "test")
+        test_pred = model_loaded.predict(test_ds)
         test_pred_class = test_pred.argmax(axis=1)
         y_true_test_class = np.concatenate([labels for _, labels in test_ds], axis=0)
 
-    with st.spinner("Prédiction sur le jeu de validation…"):
-        val_pred = predict_ds(model_loaded, val_ds, modele_dl, "val")
+        val_pred = model_loaded.predict(val_ds)
         val_pred_class = val_pred.argmax(axis=1)
         y_true_val_class = np.concatenate([labels for _, labels in val_ds], axis=0)
 
+        return class_names, y_true_val_class, val_pred_class, y_true_test_class, test_pred_class
 
-    tab_val, tab_test = st.tabs(["Validation", "Test"])
-    with tab_val:
-        evaluer(y_true_val_class, val_pred_class, class_names, "Résultats — Validation")
-    with tab_test:
-        evaluer(y_true_test_class, test_pred_class, class_names, "Résultats — Test")
+    # Une clé de stockage par modèle sélectionné dans les pills.
+    afficher_section_avec_calcul(modele_dl, calculer_dl)
 
 
 # --------------------------------------------------------------------------- #

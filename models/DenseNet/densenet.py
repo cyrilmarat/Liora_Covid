@@ -180,7 +180,7 @@ history_phase2 = model.fit(
     shuffle=False
 )
 
-model.save('densenet121_transfer.keras')
+model.save('densenet.keras')
 
 # %%
 # Fusion des historiques des 2 phases pour le tracé, avec repères de transition
@@ -208,6 +208,6 @@ plt.ylabel('F1 macro')
 plt.ylim(0, 1.05)
 plt.legend()
 plt.savefig('densenet121_f1_combined.png', dpi=150, bbox_inches='tight')
-np.save('densenet121_transfer.npy', {'f1_score': f1_train, 'val_f1_score': f1_val})
+np.save('densenet.npy', {'f1_score': f1_train, 'val_f1_score': f1_val})
 
 plt.show()
