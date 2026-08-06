@@ -102,7 +102,7 @@ class SparseF1Score(tf.keras.metrics.F1Score):
 # --------------------------------------------------------------------------- #
 st.set_page_config(page_title=" Analyse des radiographies pulmonaires", layout="wide")
 st.title("🫁 Analyse des radiographies pulmonaires 🫁 ")
-st.caption("Classification COVID / NORMAL / LUNG_OPACITY / VIRAL_PNEUMONIA | https://lioracovid.streamlit.app/")
+st.caption("Classification COVID / NORMAL / LUNG_OPACITY / VIRAL_PNEUMONIA  | https://lioracovid.streamlit.app")
 
 
 
@@ -237,11 +237,16 @@ def evaluer(y_true, y_pred, class_names, titre):
         (nom for nom in class_names if "covid" in nom.lower()), None
     )
     rappel_covid = report_dict[nom_covid]["recall"] if nom_covid is not None else None
+    f1_covid = report_dict[nom_covid]["f1-score"] if nom_covid is not None else None
 
     st.subheader(titre)
-    col_acc, col_f1, col_covid = st.columns(3)
+    col_acc, col_f1, col_f1_covid, col_covid = st.columns(4)
     col_acc.metric("Accuracy", f"{acc:.4f}")
     col_f1.metric("F1-score macro", f"{f1_macro:.4f}")
+    col_f1_covid.metric(
+        "F1-score COVID",
+        f"{f1_covid:.4f}" if f1_covid is not None else "N/A",
+    )
     col_covid.metric(
         "Rappel COVID",
         f"{rappel_covid:.4f}" if rappel_covid is not None else "N/A",
@@ -419,7 +424,7 @@ def afficher_section_avec_calcul(model_key: str, fonction_calcul, disabled: bool
         st.info("Cliquez sur « Calculer » pour lancer l'inférence et générer les résultats.")
         return
 
-    tab_val, tab_test = st.tabs(["Validation", "Test"])
+    tab_test, tab_val = st.tabs(["Test", "Validation"])
     with tab_val:
         evaluer(
             resultats["validation"]["y_true"], resultats["validation"]["y_pred"],
@@ -1267,11 +1272,11 @@ if page == pages[4] :
         )
         
         if svm_ml == "normal":
-            st.write("#### SVM :  GridSearch Best")
+            st.write("#### SVM : Best gridsearch ")
             model_SVM_path_select = model_SVM_path
             scaler_SVM_path_select = scaler_SVM_path
         if svm_ml == "weighted":
-            st.write("#### SVM :  GridSearch Best+ weighted")
+            st.write("#### SVM : Best gridsearch + weighted")
             model_SVM_path_select = model_SVM_Weighted_path
             scaler_SVM_path_select = scaler_SVM_Weighted_path
 
@@ -1352,7 +1357,7 @@ if page == pages[4] :
             key="xgboost_variante_select",
         )
 
-        tab_val, tab_test = st.tabs(["Validation", "Test"])
+        tab_test, tab_val = st.tabs(["Test", "Validation"])
         with tab_val:
             evaluer_depuis_matrice(
                 XGBOOST_RESULTS[variante_xgb]["Validation"],
@@ -1757,7 +1762,7 @@ raisons prioritaires pour un outil de dépistage :
                 transform-origin: 79% top;
             }}
             .zoom-frame img:hover {{
-                transform: scale(1.85);
+                transform: scale(1.7);
                 box-shadow: 0 14px 34px rgba(0,0,0,0.55);
                 z-index: 50;
             }}
@@ -1783,7 +1788,7 @@ raisons prioritaires pour un outil de dépistage :
             </div>
         </div>
         """
-        components.html(zoom_html, height=750, scrolling=False)
+        components.html(zoom_html, height=950, scrolling=False)
 
     except (FileNotFoundError, ValueError) as e:
         st.warning(f"{e}")
