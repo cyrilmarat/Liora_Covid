@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import tensorflow as tf
 import keras
+import cv2
+from PIL import Image
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image_dataset_from_directory
 from tensorflow.keras.applications.vgg16 import preprocess_input as vgg16_preprocess_input
@@ -1708,11 +1710,78 @@ raisons prioritaires pour un outil de dépistage :
   CNN 5 couches)
         """
     )
-    col1, col2 = st.columns(2)
-    with col1:
-        st.image(str(PROJECT_ROOT / "reports" / "figures" / "cm_deep_learning_normalized.png"), caption="Matrices de confusion normalisées — Deep Learning", width=650)
-    with col2:
-        st.image(str(PROJECT_ROOT / "reports" / "figures" / "rpt_pr_curves_dl.png"), caption="Courbes Précision-Rappel — Deep Learning", width=650)
+    st.caption("Survolez une image avec la souris pour l'agrandir.")
+
+    try:
+        image_cm_uri = image_to_data_uri(str(PROJECT_ROOT / "reports" / "figures" / "cm_deep_learning_normalized.png"))
+        image_pr_uri = image_to_data_uri(str(PROJECT_ROOT / "reports" / "figures" / "rpt_pr_curves_dl.png"))
+
+        zoom_html = f"""
+        <style>
+            .zoom-row {{
+                display: flex;
+                gap: 40px;
+                justify-content: center;
+                align-items: flex-start;
+                font-family: Arial, sans-serif;
+                padding: 70px 40px;
+                box-sizing: border-box;
+            }}
+            .zoom-item {{
+                flex: 1;
+                max-width: 46%;
+                text-align: center;
+            }}
+            .zoom-frame {{
+                overflow: visible;
+            }}
+            .zoom-frame img {{
+                width: 100%;
+                display: block;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+                transition: transform 0.35s ease, box-shadow 0.35s ease;
+                transform-origin: center center;
+                cursor: zoom-in;
+                position: relative;
+                z-index: 1;
+            }}
+            .zoom-frame img:hover {{
+                transform: scale(1.2);
+                box-shadow: 0 14px 34px rgba(0,0,0,0.55);
+                z-index: 50;
+            }}
+            .zoom-caption {{
+                margin-top: 12px;
+                font-size: 14px;
+                color: #8b949e;
+            }}
+        </style>
+
+        <div class="zoom-row">
+            <div class="zoom-item">
+                <div class="zoom-frame">
+                    <img src="{image_cm_uri}" alt="Matrices de confusion normalisées — Deep Learning">
+                </div>
+                <div class="zoom-caption">Matrices de confusion normalisées — Deep Learning</div>
+            </div>
+            <div class="zoom-item">
+                <div class="zoom-frame">
+                    <img src="{image_pr_uri}" alt="Courbes Précision-Rappel — Deep Learning">
+                </div>
+                <div class="zoom-caption">Courbes Précision-Rappel — Deep Learning</div>
+            </div>
+        </div>
+        """
+        components.html(zoom_html, height=640, scrolling=False)
+
+    except (FileNotFoundError, ValueError) as e:
+        st.warning(f"{e}")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.image(str(PROJECT_ROOT / "reports" / "figures" / "cm_deep_learning_normalized.png"), caption="Matrices de confusion normalisées — Deep Learning", width=650)
+        with col2:
+            st.image(str(PROJECT_ROOT / "reports" / "figures" / "rpt_pr_curves_dl.png"), caption="Courbes Précision-Rappel — Deep Learning", width=650)
 
     st.write("#### Grad-CAM — où le modèle « regarde »")
     st.image(str(PROJECT_ROOT / "reports" / "figures" / "gradcam_planche.png"), caption="Cartes d'activation Grad-CAM par modèle", width=750)
@@ -1822,4 +1891,102 @@ if page == pages[11] :
     
 if page == pages[12] :
     st.write("### Cas Pratique")
-        
+
+    st.markdown(
+        """
+Testez le modèle retenu — **CNN 4 niveaux (tuned)** — sur une radiographie de votre choix.
+Le pipeline reproduit le preprocessing utilisé à l'entraînement : redimensionnement
+299×299, égalisation d'histogramme, CLAHE, puis application du masque pulmonaire.
+        """
+    )
+
+    default_image_path = BASE_DIR / "radio.png"
+    default_mask_path = BASE_DIR / "masque.png"
+
+    col_img, col_mask = st.columns(2)
+
+    with col_img:
+        st.write("#### Radiographie")
+        fichier_image = st.file_uploader(
+            "Charger une radiographie (PNG/JPG)",
+            type=["png", "jpg", "jpeg"],
+            key="cas_pratique_image",
+        )
+        if fichier_image is not None:
+            image_source = Image.open(fichier_image)
+        elif default_image_path.exists():
+            st.caption(f"Aucun fichier chargé — image par défaut utilisée ({default_image_path.name}).")
+            image_source = Image.open(default_image_path)
+        else:
+            st.warning(f"Aucune image chargée et fichier par défaut introuvable : {default_image_path}")
+            image_source = None
+        if image_source is not None:
+            st.image(image_source, caption="Radiographie sélectionnée", width=280)
+
+    with col_mask:
+        st.write("#### Masque pulmonaire")
+        fichier_masque = st.file_uploader(
+            "Charger un masque (PNG/JPG)",
+            type=["png", "jpg", "jpeg"],
+            key="cas_pratique_masque",
+        )
+        if fichier_masque is not None:
+            mask_source = Image.open(fichier_masque)
+        elif default_mask_path.exists():
+            st.caption(f"Aucun fichier chargé — masque par défaut utilisé ({default_mask_path.name}).")
+            mask_source = Image.open(default_mask_path)
+        else:
+            st.warning(f"Aucun masque chargé et fichier par défaut introuvable : {default_mask_path}")
+            mask_source = None
+        if mask_source is not None:
+            st.image(mask_source, caption="Masque sélectionné", width=280)
+
+    def preprocess_cas_pratique(image_pil: Image.Image, mask_pil: Image.Image, taille: int = size_img):
+        """Reproduit le pipeline d'entraînement : niveaux de gris, resize 299x299,
+        égalisation d'histogramme, CLAHE, puis application du masque pulmonaire.
+        Ajuster clipLimit/tileGridSize si différents des valeurs utilisées à l'entraînement."""
+        img_resized = np.array(image_pil.convert("L").resize((taille, taille)))
+        mask_resized = np.array(mask_pil.convert("L").resize((taille, taille)))
+
+        img_eq = cv2.equalizeHist(img_resized)
+
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        img_clahe = clahe.apply(img_eq)
+
+        _, mask_bin = cv2.threshold(mask_resized, 127, 255, cv2.THRESH_BINARY)
+        img_masked = cv2.bitwise_and(img_clahe, img_clahe, mask=mask_bin)
+
+        return img_resized, img_clahe, img_masked
+
+    st.divider()
+
+    classifier_disabled = image_source is None or mask_source is None
+    if st.button("🔬 Classifier l'image", type="primary", disabled=classifier_disabled):
+        try:
+            model_cas_pratique = get_model_CNN256_tuned()
+        except Exception as e:
+            st.error(f"Modèle CNN 4 niveaux (tuned) indisponible : {e}")
+        else:
+            img_resized, img_clahe, img_masked = preprocess_cas_pratique(image_source, mask_source)
+
+            st.write("#### Étapes du preprocessing")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.image(img_resized, caption="Redimensionnée 299×299 (niveaux de gris)", width=220)
+            with col2:
+                st.image(img_clahe, caption="Égalisation + CLAHE", width=220)
+            with col3:
+                st.image(img_masked, caption="Masque appliqué", width=220)
+
+            entree = img_masked.astype("float32").reshape(1, size_img, size_img, 1)
+            prediction = model_cas_pratique.predict(entree)
+            classe_idx = int(np.argmax(prediction[0]))
+            classe_predite = FROZEN_CLASS_NAMES[classe_idx]
+
+            st.success(f"**Classe prédite : {classe_predite}**")
+
+            proba_df = pd.DataFrame(
+                {"Classe": FROZEN_CLASS_NAMES, "Probabilité": prediction[0]}
+            ).sort_values("Probabilité", ascending=False)
+            st.bar_chart(proba_df.set_index("Classe"))
+
