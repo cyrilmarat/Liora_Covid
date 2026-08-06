@@ -57,6 +57,7 @@ scaler_SVM_path = str(PROJECT_ROOT / "models" / "svm" / "scaler_svm.joblib")
 scaler_SVM_Weighted_path = str(PROJECT_ROOT / "models" / "svm" / "scaler_svm_weighted.joblib")
 csv_test = str(PROJECT_ROOT / "csv" / "test_features.csv")
 csv_validation = str(PROJECT_ROOT / "csv" / "validation_features.csv")
+model_random_forest_Weighted_path = str(PROJECT_ROOT / "models" / "random_forest" / "random_forest.joblib")
 
 # Répertoire de stockage en dur des résultats calculés (val/test) par modèle.
 # Remplace le cache mémoire (perdu au redémarrage de l'app) par des fichiers
@@ -1198,7 +1199,7 @@ if page == pages[4] :
 
     modele_ml = st.pills(
         "Modèle",
-        ["SVM", "Régression Logistique", "XGBoost"],
+        ["SVM", "Régression Logistique", "XGBoost", "Random Forest"],
         selection_mode="single",
         default="SVM",
         key="ml_modele_select",
@@ -1314,6 +1315,42 @@ if page == pages[4] :
                 "Résultats — Test",
             )
 
+    elif modele_ml == "Random Forest":
+        
+        st.write("#### Random Forest")    
+   
+        def calculer_Random_Forest():
+            try:
+                model_loaded = get_model_SVM(model_random_forest_Weighted_path)
+            except Exception as e:
+                st.error(f"Impossible de charger le modèle Random Forrest: {e}")
+                st.stop()
+    
+            
+            try:
+                df_test = pd.read_csv(csv_test)
+                df_validation = pd.read_csv(csv_validation)
+            except Exception as e:
+                st.error(f"Impossible de charger les fichiers de features : {e}")
+                st.stop()
+    
+            X_test = df_test.drop(['filename', 'classe'], axis=1)
+            y_test = df_test['classe']
+    
+            X_val = df_validation.drop(['filename', 'classe'], axis=1)
+            y_val = df_validation['classe']
+    
+    
+            test_pred_class = model_loaded.predict(X_test)
+            val_pred_class = model_loaded.predict(X_val)
+    
+            class_names = sorted(y_test.unique())
+    
+            return class_names, y_val, val_pred_class, y_test, test_pred_class
+    
+            # Une clé de stockage par variante (normal/weighted), pour ne pas
+            # écraser les résultats de l'une avec ceux de l'autre.
+        afficher_section_avec_calcul("RForrest", calculer_Random_Forest)
 
 # --------------------------------------------------------------------------- #
 # Modèles Deep Learning (CNN)
