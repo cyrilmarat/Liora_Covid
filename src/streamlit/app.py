@@ -447,7 +447,8 @@ pages=[
     "9.Impact du nombre de classes",
     "10.Analyse du meilleur modèle",
     "11.Conclusion",
-    "12.Limites & perspectives"
+    "12.Limites & perspectives",
+    "13.Cas pratique"
 ]
 
 
@@ -1818,3 +1819,7 @@ if page == pages[11] :
             """)
     
     st.image(str(PROJECT_ROOT / "src" / "streamlit" / "radio2.png"))
+    
+if page == pages[12] :
+    st.write("### Cas Pratique")
+        
