@@ -1720,11 +1720,11 @@ raisons prioritaires pour un outil de dépistage :
         <style>
             .zoom-row {{
                 display: flex;
-                gap: 40px;
+                gap: 80px;
                 justify-content: center;
                 align-items: flex-start;
                 font-family: Arial, sans-serif;
-                padding: 70px 40px;
+                padding: 20px 80px 320px 80px;
                 box-sizing: border-box;
             }}
             .zoom-item {{
@@ -1736,18 +1736,28 @@ raisons prioritaires pour un outil de dépistage :
                 overflow: visible;
             }}
             .zoom-frame img {{
-                width: 100%;
+                height: 380px;
+                width: auto;
+                max-width: 100%;
                 display: block;
+                margin: 0 auto;
                 border-radius: 8px;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.25);
                 transition: transform 0.35s ease, box-shadow 0.35s ease;
-                transform-origin: center center;
                 cursor: zoom-in;
                 position: relative;
                 z-index: 1;
             }}
+            /* Image de gauche : le centre agrandi se décale de 20% vers la droite */
+            .zoom-item:first-child .zoom-frame img {{
+                transform-origin: 21% top;
+            }}
+            /* Image de droite : le centre agrandi se décale de 20% vers la gauche */
+            .zoom-item:last-child .zoom-frame img {{
+                transform-origin: 79% top;
+            }}
             .zoom-frame img:hover {{
-                transform: scale(1.2);
+                transform: scale(1.85);
                 box-shadow: 0 14px 34px rgba(0,0,0,0.55);
                 z-index: 50;
             }}
@@ -1773,7 +1783,7 @@ raisons prioritaires pour un outil de dépistage :
             </div>
         </div>
         """
-        components.html(zoom_html, height=640, scrolling=False)
+        components.html(zoom_html, height=750, scrolling=False)
 
     except (FileNotFoundError, ValueError) as e:
         st.warning(f"{e}")
