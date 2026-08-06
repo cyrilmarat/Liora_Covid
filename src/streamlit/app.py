@@ -1267,11 +1267,11 @@ if page == pages[4] :
         )
         
         if svm_ml == "normal":
-            st.write("#### SVM : Best gridsearch ")
+            st.write("#### SVM :  GridSearch Best")
             model_SVM_path_select = model_SVM_path
             scaler_SVM_path_select = scaler_SVM_path
         if svm_ml == "weighted":
-            st.write("#### SVM : Best gridsearch + weighted")
+            st.write("#### SVM :  GridSearch Best+ weighted")
             model_SVM_path_select = model_SVM_Weighted_path
             scaler_SVM_path_select = scaler_SVM_Weighted_path
 
