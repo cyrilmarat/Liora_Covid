@@ -8,9 +8,6 @@ import tensorflow as tf
 import keras
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image_dataset_from_directory
-from tensorflow.keras.applications.vgg16 import preprocess_input as vgg16_preprocess_input
-from tensorflow.keras.applications.inception_v3 import preprocess_input as inceptionv3_preprocess_input
-from tensorflow.keras.applications.densenet import preprocess_input as densenet_preprocess_input
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn import metrics
 import joblib
@@ -35,35 +32,15 @@ from frozen_results_data import CLASS_NAMES as FROZEN_CLASS_NAMES, LOGREG_RESULT
 model_CNN1024_path = str(PROJECT_ROOT / "models" / "cnn1024" / "cnn_1024.keras")
 model_CNN512_path = str(PROJECT_ROOT / "models" / "cnn512" / "cnn_512.keras")
 model_CNN256_path = str(PROJECT_ROOT / "models" / "cnn256" / "cnn_256.keras")
-model_CNN256_tuned_path = str(PROJECT_ROOT / "models" / "cnn256_tuned" / "cnn_256_tuned.keras")
 model_CNN128_path = str(PROJECT_ROOT / "models" / "cnn128" / "cnn_128.keras")
 model_CNN64_path = str(PROJECT_ROOT / "models" / "cnn64" / "cnn_64.keras")
 model_CNN32_path = str(PROJECT_ROOT / "models" / "cnn32" / "cnn_32.keras")
-model_VGG16_head_path = str(PROJECT_ROOT / "models" / "vgg16" / "vgg16_head.keras")
-courbe_VGG16_path = str(PROJECT_ROOT / "models" / "vgg16" / "vgg16_f1_combined.png")
-model_VGG16_finetuned_path = str(PROJECT_ROOT / "models" / "vgg16" / "vgg16_finetuned.keras")
-model_InceptionV3_head_path = str(PROJECT_ROOT / "models" / "inceptionv3" / "inceptionv3_head.keras")
-model_InceptionV3_finetuned_path = str(PROJECT_ROOT / "models" / "inceptionv3" / "inceptionv3_finetuned.keras")
-courbe_Inceptionv3_path = str(PROJECT_ROOT / "models" / "inceptionv3" / "inceptionv3_f1_combined.png")
-model_DenseNet_path = str(PROJECT_ROOT / "models" / "DenseNet" / "densenet.keras")
-courbe_DenseNet_path = str(PROJECT_ROOT / "models" / "DenseNet" / "densenet121_f1_combined.png")
 val_dir = str(PROJECT_ROOT / "COVID-19_Radiography_Dataset_split" / "validation")
 test_dir = str(PROJECT_ROOT / "COVID-19_Radiography_Dataset_split" / "test")
-model_SVM_Weighted_path = str(PROJECT_ROOT / "models" / "svm" / "svm_weighted.joblib")
-model_SVM_path = str(PROJECT_ROOT / "models" / "svm" / "svm.joblib")
+model_SVM_path = str(PROJECT_ROOT / "models" / "svm" / "svm_weighted.joblib")
 scaler_SVM_path = str(PROJECT_ROOT / "models" / "svm" / "scaler_svm.joblib")
-scaler_SVM_Weighted_path = str(PROJECT_ROOT / "models" / "svm" / "scaler_svm_weighted.joblib")
 csv_test = str(PROJECT_ROOT / "csv" / "test_features.csv")
 csv_validation = str(PROJECT_ROOT / "csv" / "validation_features.csv")
-
-courbe_CNN1024_path = str(PROJECT_ROOT / "models" / "cnn1024" / "cnn_1024.png")
-courbe_CNN512_path = str(PROJECT_ROOT / "models" / "cnn512" / "cnn_512.png")
-courbe__CNN256_path = str(PROJECT_ROOT / "models" / "cnn256" / "cnn_256.png")
-courbe_CNN256_tuned_path = str(PROJECT_ROOT / "models" / "cnn256_tuned" / "cnn_256_tuned.png")
-courbe__CNN128_path = str(PROJECT_ROOT / "models" / "cnn128" / "cnn_128.png")
-courbe_CNN64_path = str(PROJECT_ROOT / "models" / "cnn64" / "cnn_64.png")
-courbe_CNN32_path = str(PROJECT_ROOT / "models" / "cnn32" / "cnn_32.png")
-
 
 # --------------------------------------------------------------------------- #
 # Definitions globales
@@ -129,10 +106,6 @@ def get_model_CNN512():
 def get_model_CNN256():
     return load_model(model_CNN256_path)
 
-@st.cache_resource(show_spinner="Chargement du modèle CNN256 Tuned")
-def get_model_CNN256_tuned():
-    return load_model(model_CNN256_tuned_path)
-
 @st.cache_resource(show_spinner="Chargement du modèle CNN128")
 def get_model_CNN128():
     return load_model(model_CNN128_path)
@@ -144,26 +117,6 @@ def get_model_CNN64():
 @st.cache_resource(show_spinner="Chargement du modèle CNN32")
 def get_model_CNN32():
     return load_model(model_CNN32_path)
-
-@st.cache_resource(show_spinner="Chargement du modèle VGG16 (head) …")
-def get_model_VGG16_head():
-    return load_model(model_VGG16_head_path)
-
-@st.cache_resource(show_spinner="Chargement du modèle VGG16 (fine-tuned) …")
-def get_model_VGG16_finetuned():
-    return load_model(model_VGG16_finetuned_path)
-
-@st.cache_resource(show_spinner="Chargement du modèle InceptionV3 (head) …")
-def get_model_InceptionV3_head():
-    return load_model(model_InceptionV3_head_path)
-
-@st.cache_resource(show_spinner="Chargement du modèle InceptionV3 (fine-tuned) …")
-def get_model_InceptionV3_finetuned():
-    return load_model(model_InceptionV3_finetuned_path)
-
-@st.cache_resource(show_spinner="Chargement du modèle DenseNet …")
-def get_model_DenseNet():
-    return load_model(model_DenseNet_path)
 
 @st.cache_resource(show_spinner="Chargement du modèle SVM …")
 def get_model_SVM(path: str):
@@ -185,43 +138,6 @@ def get_dataset(directory: str, img_h: int, img_w: int, batch_size: int, color_m
         shuffle=False,
         color_mode=color_mode,
     )
-
-
-@st.cache_data(show_spinner=False)
-def predict_ds(_model, _ds, model_key: str, ds_name: str):
-    """Prédictions mises en cache pour un couple (modèle, dataset).
-
-    `_model` et `_ds` sont préfixés par `_` pour ne pas être hashés par
-    Streamlit (objets non hashables : modèle Keras, tf.data.Dataset).
-    `model_key` (nom du modèle sélectionné) et `ds_name` ("val"/"test")
-    servent de clé de cache explicite : sans eux, Streamlit ne pourrait pas
-    détecter un changement de modèle ou de dataset et renverrait un résultat
-    périmé.
-    """
-    return _model.predict(_ds)
-
-
-@st.cache_resource(show_spinner="Chargement du jeu de données…")
-def get_dataset_dl(directory: str, img_h: int, img_w: int, batch_size: int, color_mode: str, _preprocess_fn=None):
-    """Charge un jeu de données pour un modèle de Deep Learning.
-
-    `_preprocess_fn` (préfixé par `_` pour ne pas être hashé par le cache de
-    Streamlit) applique le preprocessing spécifique au réseau de transfer
-    learning (VGG16, InceptionV3, DenseNet). Laisser à None pour les CNN
-    maison, qui gèrent leur normalisation en interne.
-    """
-    ds = image_dataset_from_directory(
-        directory=directory,
-        image_size=(img_h, img_w),
-        batch_size=batch_size,
-        labels="inferred",
-        shuffle=False,
-        color_mode=color_mode,
-    )
-    class_names = ds.class_names
-    if _preprocess_fn is not None:
-        ds = ds.map(lambda x, y: (_preprocess_fn(x), y))
-    return ds, class_names
 
 
 def evaluer(y_true, y_pred, class_names, titre):
@@ -286,9 +202,9 @@ pages=[
     "2.Données & Visualisation",
     "3.Preprocessing",
     "4.Vers la modélisation",
-    "5.Modèles de Machine Learning",
-    "6.Modèles de Deep Learning",
-    "7.Modèles & résultats",
+    "5.Modèles & résultats",
+    "6.ML : Modèles",
+    "7.DL : Modèles",
     "8.Biais de source",
     "9.Impact du nombre de classes",
     "10.Analyse du meilleur modèle",
@@ -1033,7 +949,7 @@ et bien évaluer la détection de la classe COVID (minoritaire).
 # --------------------------------------------------------------------------- #
 # Modèles & résultats
 # --------------------------------------------------------------------------- #
-if page == pages[6] :
+if page == pages[4] :
     st.write("### Modèles entraînés & résultats")
 
     st.markdown(
@@ -1047,7 +963,7 @@ Un **DummyClassifier** (aucun apprentissage réel) sert de plancher de référen
 F1-macro de 0,16 à 0,25 selon la stratégie — tout modèle utile doit largement le dépasser.
         """
     )
-    st.image(str(PROJECT_ROOT / "src" / "streamlit" / "f1_macro_comparaison.png"), caption="F1-macro — comparaison Machine Learning vs Deep Learning (test)", width=750)
+    st.image(str(PROJECT_ROOT / "reports" / "figures" / "rpt_f1_global.png"), caption="F1-macro — comparaison Machine Learning vs Deep Learning (test)", width=750)
 
     st.write("#### Tableau récapitulatif final")
     st.caption(
@@ -1088,8 +1004,8 @@ F1-macro de 0,16 à 0,25 selon la stratégie — tout modèle utile doit largeme
 # --------------------------------------------------------------------------- #
 # Modèles Machine Learning (SVM, Régression Logistique, XGBoost)
 # --------------------------------------------------------------------------- #
-if page == pages[4] :
-    st.write("### Modèles de Machine Learning")
+if page == pages[5] :
+    st.write("### ML : Modèles")
 
     modele_ml = st.pills(
         "Modèle",
@@ -1100,27 +1016,10 @@ if page == pages[4] :
     )
 
     if modele_ml == "SVM":
-        
-        svm_ml = st.pills(
-        "variante",
-        ["normal", "weighted"],
-        selection_mode="single",
-        default="weighted",
-        key="svm_mode_select",
-        )
-        
-        if svm_ml == "normal":
-            st.write("#### SVM : Best gridsearch ")
-            model_SVM_path_select=model_SVM_path
-            scaler_SVM_path=scaler_SVM_path
-        if svm_ml == "weighted":
-            st.write("#### SVM : Best gridsearch + weighted")
-            model_SVM_path_select=model_SVM_Weighted_path
-            scaler_SVM_path=scaler_SVM_Weighted_path
-
+        st.write("#### SVM")
 
         try:
-            model_loaded = get_model_SVM(model_SVM_path_select)
+            model_loaded = get_model_SVM(model_SVM_path)
         except Exception as e:
             st.error(f"Impossible de charger le modèle SVM: {e}")
             st.stop()
@@ -1216,31 +1115,19 @@ if page == pages[4] :
 # --------------------------------------------------------------------------- #
 # Modèles Deep Learning (CNN)
 # --------------------------------------------------------------------------- #
-if page == pages[5] :
-    st.write("### Modèles de Deep Learning")
+if page == pages[6] :
+    st.write("### DL : Modèles")
 
     modele_dl = st.pills(
         "Modèle",
-        [
-            "CNN 1 niveaux", "CNN 2 niveaux", "CNN 3 niveaux", "CNN 4 niveaux","CNN 4 niveaux tuned",
-            "CNN 5 niveaux", "CNN 6 niveaux", "VGG16", "InceptionV3", "DenseNet",
-        ],
+        ["CNN 1 niveaux","CNN 2 niveaux","CNN 3 niveaux","CNN 4 niveaux","CNN 5 niveaux","CNN 6 niveaux"],
         selection_mode="single",
-        default="CNN 4 niveaux tuned",
+        default="CNN 4 niveaux",
         key="dl_modele_select",
     )
 
-    # Par défaut : CNN maison en niveaux de gris, pas de preprocessing dédié.
-    # Les modèles de transfer learning (VGG16, InceptionV3, DenseNet)
-    # écrasent ces valeurs avec leurs propres taille d'image, mode couleur
-    # (RVB) et fonction de preprocessing.
-    color_mode = "grayscale"
-    img_h = img_w = size_img
-    preprocess_fn = None
-
     if modele_dl == "CNN 6 niveaux":
         st.write("#### CNN 6 niveaux")
-        st.image(courbe_CNN1024_path, width=600)
         try:
             model_loaded = get_model_CNN1024()
         except Exception as e:
@@ -1250,7 +1137,6 @@ if page == pages[5] :
 
     elif modele_dl == "CNN 5 niveaux":
         st.write("#### CNN 5 niveaux")
-        st.image(courbe_CNN512_path, width=600)
         try:
             model_loaded = get_model_CNN512()
         except Exception as e:
@@ -1259,37 +1145,23 @@ if page == pages[5] :
 
     elif modele_dl == "CNN 4 niveaux":
         st.write("#### CNN 4 niveaux")
-        st.image(courbe__CNN256_path, width=600)
         try:
             model_loaded = get_model_CNN256()
         except Exception as e:
             st.error(f"Impossible de charger le modèle  CNN256 : {e}")
             st.stop()
             
-    elif modele_dl == "CNN 4 niveaux tuned":
-        st.write("#### CNN 4 niveaux tuned")
-        st.caption(
-        "recherche de la meilleure solution avec keras_tuner sur hyperparamètres : dropout / dense / L2 / learning_rate"
-        )
-        st.image(courbe_CNN256_tuned_path, width=600)
-        try:
-            model_loaded = get_model_CNN256_tuned()
-        except Exception as e:
-            st.error(f"Impossible de charger le modèle  CNN256 tuned: {e}")
-            st.stop()
     
     elif modele_dl == "CNN 3 niveaux":
         st.write("#### CNN 3 niveaux")
         try:
             model_loaded = get_model_CNN128()
-            st.image(courbe__CNN128_path, width=600)
         except Exception as e:
             st.error(f"Impossible de charger le modèle  CNN128 : {e}")
             st.stop()
             
     elif modele_dl == "CNN 2 niveaux":
             st.write("#### CNN 2 niveaux")
-            st.image(courbe_CNN64_path, width=600)
             try:
                 model_loaded = get_model_CNN64()
             except Exception as e:
@@ -1297,67 +1169,12 @@ if page == pages[5] :
                 st.stop()
                 
     elif modele_dl == "CNN 1 niveaux":
-                st.write("#### CNN 1 niveaux")
-                st.image(courbe_CNN32_path, width=600)
+                st.write("#### CNN & niveaux")
                 try:
                     model_loaded = get_model_CNN32()
                 except Exception as e:
                     st.error(f"Impossible de charger le modèle  CNN32 : {e}")
                     st.stop()
-
-    elif modele_dl == "VGG16":
-        st.write("#### VGG16 (transfer learning)")
-        st.caption(
-                " stratégie de transfert learning : Fine-Tuning partiel de la dernière couche profonde sur 20 epoch"
-            )
-        st.image(courbe_VGG16_path, width=600)
-        
-        try:
-            
-            model_loaded = get_model_VGG16_finetuned()
-            
-        except Exception as e:
-            st.error(f"Impossible de charger le modèle VGG16 : {e}")
-            st.stop()
-
-        color_mode = "rgb"
-        img_h = img_w = 224
-        preprocess_fn = vgg16_preprocess_input
-
-    elif modele_dl == "InceptionV3":
-        st.write("#### InceptionV3 (transfer learning)")
-        st.caption(
-                " stratégie de transfert learning : Fine-Tuning partiel des derniers 20% couche profonde sur 20 epoch"
-            )
-        st.image(courbe_Inceptionv3_path, width=600)
-        try:
-            
-                model_loaded = get_model_InceptionV3_finetuned()
-            
-        except Exception as e:
-            st.error(f"Impossible de charger le modèle InceptionV3 : {e}")
-            st.stop()
-
-        color_mode = "rgb"
-        img_h = img_w = 299
-        preprocess_fn = inceptionv3_preprocess_input
-
-    elif modele_dl == "DenseNet":
-        st.write("#### DenseNet (transfer learning)")
-        st.caption(
-                " stratégie de transfert learning : Fine-Tuning partiel de la moitié des couches sur 30 epoch"
-            )       
-        st.image(courbe_DenseNet_path, width=600)
-       
-        try:
-            model_loaded = get_model_DenseNet()
-        except Exception as e:
-            st.error(f"Impossible de charger le modèle DenseNet : {e}")
-            st.stop()
-
-        color_mode = "rgb"
-        img_h = img_w = 299
-        preprocess_fn = densenet_preprocess_input
 
     with st.expander("📋 Résumé du modèle"):
         summary_lines = []
@@ -1365,25 +1182,21 @@ if page == pages[5] :
         st.code("\n".join(summary_lines))
 
     try:
-        val_ds, class_names = get_dataset_dl(
-            val_dir, img_h=img_h, img_w=img_w, batch_size=32,
-            color_mode=color_mode, _preprocess_fn=preprocess_fn,
-        )
-        test_ds, class_names = get_dataset_dl(
-            test_dir, img_h=img_h, img_w=img_w, batch_size=32,
-            color_mode=color_mode, _preprocess_fn=preprocess_fn,
-        )
+        val_ds = get_dataset(val_dir, img_h=size_img,img_w=size_img, batch_size=32, color_mode='grayscale')
+        test_ds = get_dataset(test_dir,img_h=size_img,img_w=size_img,  batch_size=32, color_mode='grayscale')
     except Exception as e:
         st.error(f"Impossible de charger les jeux de données : {e}")
         st.stop()
 
+    class_names = test_ds.class_names
+
     with st.spinner("Prédiction sur le jeu de test…"):
-        test_pred = predict_ds(model_loaded, test_ds, modele_dl, "test")
+        test_pred = model_loaded.predict(test_ds)
         test_pred_class = test_pred.argmax(axis=1)
         y_true_test_class = np.concatenate([labels for _, labels in test_ds], axis=0)
 
     with st.spinner("Prédiction sur le jeu de validation…"):
-        val_pred = predict_ds(model_loaded, val_ds, modele_dl, "val")
+        val_pred = model_loaded.predict(val_ds)
         val_pred_class = val_pred.argmax(axis=1)
         y_true_val_class = np.concatenate([labels for _, labels in val_ds], axis=0)
 

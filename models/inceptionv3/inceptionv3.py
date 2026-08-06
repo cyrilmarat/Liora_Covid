@@ -253,6 +253,33 @@ plt.savefig('inceptionv3_finetune.png')
 np.save('inceptionv3_head.npy', model_history.history)
 np.save('inceptionv3_finetuned.npy', fine_tune_history.history)
 
+# %%
+# Courbe combinée F1 macro (phase head + fine-tuning), avec repères de transition
+f1_train_combined = model_history.history['f1_score'] + fine_tune_history.history['f1_score']
+f1_val_combined = model_history.history['val_f1_score'] + fine_tune_history.history['val_f1_score']
+
+n_head_epochs = len(model_history.history['f1_score'])
+global_epochs = np.arange(1, len(f1_train_combined) + 1)
+
+# Meilleure époque de fine-tuning au sens de la validation
+best_ft_local_epoch = int(np.argmax(fine_tune_history.history['val_f1_score'])) + 1
+best_ft_global_epoch = n_head_epochs + best_ft_local_epoch
+
+plt.figure(figsize=(14, 8))
+plt.plot(global_epochs, f1_train_combined, label='Entraînement', color='tab:blue')
+plt.plot(global_epochs, f1_val_combined, label='Validation', color='tab:orange')
+plt.axvline(x=n_head_epochs + 0.5, color='steelblue', linestyle='--', label='Début du fine-tuning')
+plt.axvline(x=best_ft_global_epoch, color='steelblue', linestyle='-.',
+            label=f'Meilleur fine-tuning : époque {best_ft_local_epoch} (époque globale {best_ft_global_epoch})')
+plt.scatter([best_ft_global_epoch], [f1_val_combined[best_ft_global_epoch - 1]], color='steelblue', zorder=5)
+
+plt.title('Evolution du F1 macro — InceptionV3\nPhase 1 et fine-tuning')
+plt.xlabel('Époque globale')
+plt.ylabel('F1 macro')
+plt.ylim(0, 1.05)
+plt.legend()
+plt.savefig('inceptionv3_f1_combined.png', dpi=150, bbox_inches='tight')
+
 # Affichage de la figure
 plt.show()
 

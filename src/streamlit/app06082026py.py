@@ -56,15 +56,6 @@ scaler_SVM_Weighted_path = str(PROJECT_ROOT / "models" / "svm" / "scaler_svm_wei
 csv_test = str(PROJECT_ROOT / "csv" / "test_features.csv")
 csv_validation = str(PROJECT_ROOT / "csv" / "validation_features.csv")
 
-courbe_CNN1024_path = str(PROJECT_ROOT / "models" / "cnn1024" / "cnn_1024.png")
-courbe_CNN512_path = str(PROJECT_ROOT / "models" / "cnn512" / "cnn_512.png")
-courbe__CNN256_path = str(PROJECT_ROOT / "models" / "cnn256" / "cnn_256.png")
-courbe_CNN256_tuned_path = str(PROJECT_ROOT / "models" / "cnn256_tuned" / "cnn_256_tuned.png")
-courbe__CNN128_path = str(PROJECT_ROOT / "models" / "cnn128" / "cnn_128.png")
-courbe_CNN64_path = str(PROJECT_ROOT / "models" / "cnn64" / "cnn_64.png")
-courbe_CNN32_path = str(PROJECT_ROOT / "models" / "cnn32" / "cnn_32.png")
-
-
 # --------------------------------------------------------------------------- #
 # Definitions globales
 # --------------------------------------------------------------------------- #
@@ -187,20 +178,6 @@ def get_dataset(directory: str, img_h: int, img_w: int, batch_size: int, color_m
     )
 
 
-@st.cache_data(show_spinner=False)
-def predict_ds(_model, _ds, model_key: str, ds_name: str):
-    """Prédictions mises en cache pour un couple (modèle, dataset).
-
-    `_model` et `_ds` sont préfixés par `_` pour ne pas être hashés par
-    Streamlit (objets non hashables : modèle Keras, tf.data.Dataset).
-    `model_key` (nom du modèle sélectionné) et `ds_name` ("val"/"test")
-    servent de clé de cache explicite : sans eux, Streamlit ne pourrait pas
-    détecter un changement de modèle ou de dataset et renverrait un résultat
-    périmé.
-    """
-    return _model.predict(_ds)
-
-
 @st.cache_resource(show_spinner="Chargement du jeu de données…")
 def get_dataset_dl(directory: str, img_h: int, img_w: int, batch_size: int, color_mode: str, _preprocess_fn=None):
     """Charge un jeu de données pour un modèle de Deep Learning.
@@ -286,9 +263,9 @@ pages=[
     "2.Données & Visualisation",
     "3.Preprocessing",
     "4.Vers la modélisation",
-    "5.Modèles de Machine Learning",
-    "6.Modèles de Deep Learning",
-    "7.Modèles & résultats",
+    "5.Modèles & résultats",
+    "6.Modèles de Machine Learning",
+    "7.Modèles de Deep Learning",
     "8.Biais de source",
     "9.Impact du nombre de classes",
     "10.Analyse du meilleur modèle",
@@ -1033,7 +1010,7 @@ et bien évaluer la détection de la classe COVID (minoritaire).
 # --------------------------------------------------------------------------- #
 # Modèles & résultats
 # --------------------------------------------------------------------------- #
-if page == pages[6] :
+if page == pages[4] :
     st.write("### Modèles entraînés & résultats")
 
     st.markdown(
@@ -1047,7 +1024,7 @@ Un **DummyClassifier** (aucun apprentissage réel) sert de plancher de référen
 F1-macro de 0,16 à 0,25 selon la stratégie — tout modèle utile doit largement le dépasser.
         """
     )
-    st.image(str(PROJECT_ROOT / "src" / "streamlit" / "f1_macro_comparaison.png"), caption="F1-macro — comparaison Machine Learning vs Deep Learning (test)", width=750)
+    st.image(str(PROJECT_ROOT / "reports" / "figures" / "rpt_f1_global.png"), caption="F1-macro — comparaison Machine Learning vs Deep Learning (test)", width=750)
 
     st.write("#### Tableau récapitulatif final")
     st.caption(
@@ -1088,7 +1065,7 @@ F1-macro de 0,16 à 0,25 selon la stratégie — tout modèle utile doit largeme
 # --------------------------------------------------------------------------- #
 # Modèles Machine Learning (SVM, Régression Logistique, XGBoost)
 # --------------------------------------------------------------------------- #
-if page == pages[4] :
+if page == pages[5] :
     st.write("### Modèles de Machine Learning")
 
     modele_ml = st.pills(
@@ -1216,7 +1193,7 @@ if page == pages[4] :
 # --------------------------------------------------------------------------- #
 # Modèles Deep Learning (CNN)
 # --------------------------------------------------------------------------- #
-if page == pages[5] :
+if page == pages[6] :
     st.write("### Modèles de Deep Learning")
 
     modele_dl = st.pills(
@@ -1240,7 +1217,6 @@ if page == pages[5] :
 
     if modele_dl == "CNN 6 niveaux":
         st.write("#### CNN 6 niveaux")
-        st.image(courbe_CNN1024_path, width=600)
         try:
             model_loaded = get_model_CNN1024()
         except Exception as e:
@@ -1250,7 +1226,6 @@ if page == pages[5] :
 
     elif modele_dl == "CNN 5 niveaux":
         st.write("#### CNN 5 niveaux")
-        st.image(courbe_CNN512_path, width=600)
         try:
             model_loaded = get_model_CNN512()
         except Exception as e:
@@ -1259,7 +1234,6 @@ if page == pages[5] :
 
     elif modele_dl == "CNN 4 niveaux":
         st.write("#### CNN 4 niveaux")
-        st.image(courbe__CNN256_path, width=600)
         try:
             model_loaded = get_model_CNN256()
         except Exception as e:
@@ -1268,10 +1242,6 @@ if page == pages[5] :
             
     elif modele_dl == "CNN 4 niveaux tuned":
         st.write("#### CNN 4 niveaux tuned")
-        st.caption(
-        "recherche de la meilleure solution avec keras_tuner sur hyperparamètres : dropout / dense / L2 / learning_rate"
-        )
-        st.image(courbe_CNN256_tuned_path, width=600)
         try:
             model_loaded = get_model_CNN256_tuned()
         except Exception as e:
@@ -1282,14 +1252,12 @@ if page == pages[5] :
         st.write("#### CNN 3 niveaux")
         try:
             model_loaded = get_model_CNN128()
-            st.image(courbe__CNN128_path, width=600)
         except Exception as e:
             st.error(f"Impossible de charger le modèle  CNN128 : {e}")
             st.stop()
             
     elif modele_dl == "CNN 2 niveaux":
             st.write("#### CNN 2 niveaux")
-            st.image(courbe_CNN64_path, width=600)
             try:
                 model_loaded = get_model_CNN64()
             except Exception as e:
@@ -1298,7 +1266,6 @@ if page == pages[5] :
                 
     elif modele_dl == "CNN 1 niveaux":
                 st.write("#### CNN 1 niveaux")
-                st.image(courbe_CNN32_path, width=600)
                 try:
                     model_loaded = get_model_CNN32()
                 except Exception as e:
@@ -1307,9 +1274,7 @@ if page == pages[5] :
 
     elif modele_dl == "VGG16":
         st.write("#### VGG16 (transfer learning)")
-        st.caption(
-                " stratégie de transfert learning : Fine-Tuning partiel de la dernière couche profonde sur 20 epoch"
-            )
+        
         st.image(courbe_VGG16_path, width=600)
         
         try:
@@ -1326,9 +1291,6 @@ if page == pages[5] :
 
     elif modele_dl == "InceptionV3":
         st.write("#### InceptionV3 (transfer learning)")
-        st.caption(
-                " stratégie de transfert learning : Fine-Tuning partiel des derniers 20% couche profonde sur 20 epoch"
-            )
         st.image(courbe_Inceptionv3_path, width=600)
         try:
             
@@ -1344,9 +1306,7 @@ if page == pages[5] :
 
     elif modele_dl == "DenseNet":
         st.write("#### DenseNet (transfer learning)")
-        st.caption(
-                " stratégie de transfert learning : Fine-Tuning partiel de la moitié des couches sur 30 epoch"
-            )       
+       
         st.image(courbe_DenseNet_path, width=600)
        
         try:
@@ -1378,12 +1338,12 @@ if page == pages[5] :
         st.stop()
 
     with st.spinner("Prédiction sur le jeu de test…"):
-        test_pred = predict_ds(model_loaded, test_ds, modele_dl, "test")
+        test_pred = model_loaded.predict(test_ds)
         test_pred_class = test_pred.argmax(axis=1)
         y_true_test_class = np.concatenate([labels for _, labels in test_ds], axis=0)
 
     with st.spinner("Prédiction sur le jeu de validation…"):
-        val_pred = predict_ds(model_loaded, val_ds, modele_dl, "val")
+        val_pred = model_loaded.predict(val_ds)
         val_pred_class = val_pred.argmax(axis=1)
         y_true_val_class = np.concatenate([labels for _, labels in val_ds], axis=0)
 

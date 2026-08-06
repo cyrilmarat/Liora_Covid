@@ -183,20 +183,31 @@ history_phase2 = model.fit(
 model.save('densenet121_transfer.keras')
 
 # %%
-# Fusion des historiques des 2 phases pour le tracé
+# Fusion des historiques des 2 phases pour le tracé, avec repères de transition
 f1_train = history_phase1.history['f1_score'] + history_phase2.history['f1_score']
 f1_val = history_phase1.history['val_f1_score'] + history_phase2.history['val_f1_score']
-phase_boundary = len(history_phase1.history['f1_score'])
 
-plt.xlabel('Epochs')
-plt.ylabel('F1_Score')
+n_head_epochs = len(history_phase1.history['f1_score'])
+global_epochs = np.arange(1, len(f1_train) + 1)
 
-plt.plot(f1_train, label='Training f1_score', color='blue')
-plt.plot(f1_val, label='Validation f1_score', color='red')
-plt.axvline(x=phase_boundary - 0.5, color='gray', linestyle='--', label='Début fine-tuning')
+# Meilleure époque de fine-tuning au sens de la validation
+best_ft_local_epoch = int(np.argmax(history_phase2.history['val_f1_score'])) + 1
+best_ft_global_epoch = n_head_epochs + best_ft_local_epoch
 
+plt.figure(figsize=(14, 8))
+plt.plot(global_epochs, f1_train, label='Entraînement', color='tab:blue')
+plt.plot(global_epochs, f1_val, label='Validation', color='tab:orange')
+plt.axvline(x=n_head_epochs + 0.5, color='steelblue', linestyle='--', label='Début du fine-tuning')
+plt.axvline(x=best_ft_global_epoch, color='steelblue', linestyle='-.',
+            label=f'Meilleur fine-tuning : époque {best_ft_local_epoch} (époque globale {best_ft_global_epoch})')
+plt.scatter([best_ft_global_epoch], [f1_val[best_ft_global_epoch - 1]], color='steelblue', zorder=5)
+
+plt.title('Evolution du F1 macro — DenseNet121\nPhase 1 et fine-tuning')
+plt.xlabel('Époque globale')
+plt.ylabel('F1 macro')
+plt.ylim(0, 1.05)
 plt.legend()
-plt.savefig('densenet121_transfer.png')
+plt.savefig('densenet121_f1_combined.png', dpi=150, bbox_inches='tight')
 np.save('densenet121_transfer.npy', {'f1_score': f1_train, 'val_f1_score': f1_val})
 
 plt.show()
