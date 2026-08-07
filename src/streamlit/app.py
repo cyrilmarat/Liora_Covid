@@ -1209,7 +1209,7 @@ Un **DummyClassifier** (aucun apprentissage réel) sert de plancher de référen
 F1-macro de 0,16 à 0,25 selon la stratégie — tout modèle utile doit largement le dépasser.
         """
     )
-    st.image(str(PROJECT_ROOT / "src" / "streamlit" / "f1_macro_comparaison_2.png"), caption="F1-macro — comparaison Machine Learning vs Deep Learning (test)", width=1200)
+    st.image(str(PROJECT_ROOT / "src" / "streamlit" / "f1_macro_comparaison_2.png"), caption="F1-macro — comparaison Machine Learning vs Deep Learning (test)", width=1400)
 
     st.write("#### Tableau récapitulatif final")
     st.caption(
@@ -1762,7 +1762,7 @@ raisons prioritaires pour un outil de dépistage :
                 transform-origin: 79% top;
             }}
             .zoom-frame img:hover {{
-                transform: scale(1.7);
+                transform: scale(1.85);
                 box-shadow: 0 14px 34px rgba(0,0,0,0.55);
                 z-index: 50;
             }}
@@ -1788,7 +1788,7 @@ raisons prioritaires pour un outil de dépistage :
             </div>
         </div>
         """
-        components.html(zoom_html, height=950, scrolling=False)
+        components.html(zoom_html, height=750, scrolling=False)
 
     except (FileNotFoundError, ValueError) as e:
         st.warning(f"{e}")
